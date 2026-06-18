@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import BodyMap from './body-map'
 import { useMedications } from '@/hooks/use-medications'
-import { useIntakeLogs, useCreateIntakeLog } from '@/hooks/use-intake-logs'
+import { useIntakeLogs, useCreateIntakeLog, useUpdateIntakeLog } from '@/hooks/use-intake-logs'
 import { getRecentSites } from '@/lib/injection-sites'
 import { startOfLocalDay, endOfLocalDay } from '@/lib/date-utils'
 import type { Ppa_intakelogsppa_injectionsite } from '@/generated/models/Ppa_intakelogsModel'
@@ -70,6 +71,7 @@ export default function LogIntakeDialog({
 
   const { data: medications = [] } = useMedications()
   const createLog = useCreateIntakeLog()
+  const updateLog = useUpdateIntakeLog()
 
   const today = new Date()
   const { data: recentLogs = [] } = useIntakeLogs({
@@ -79,18 +81,20 @@ export default function LogIntakeDialog({
 
   const recentSites = getRecentSites(recentLogs, now)
 
-  const isPreSet = !!prePopulation.medicationId
+  const isEdit = !!prePopulation.editingLogId
+  const isPreSet = !isEdit && !!prePopulation.medicationId
 
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       const initNow = new Date()
+      const baseDateTime = prePopulation.loggedAt ?? prePopulation.dateTime ?? initNow
       setSelectedMedId(prePopulation.medicationId ?? '')
-      setDate(formatDateInput(prePopulation.calendarDate ?? prePopulation.dateTime ?? initNow))
-      setTime(formatTimeInput(prePopulation.dateTime ?? initNow))
-      setStatus(894250000)
-      setSelectedSite(undefined)
-      setNotes('')
+      setDate(formatDateInput(prePopulation.calendarDate ?? baseDateTime))
+      setTime(formatTimeInput(baseDateTime))
+      setStatus(prePopulation.initialStatus ?? 894250000)
+      setSelectedSite(prePopulation.initialInjectionSite ?? undefined)
+      setNotes(prePopulation.initialNotes ?? '')
       setShowBodyMap(true)
     }
   }, [open, prePopulation])
@@ -126,28 +130,40 @@ export default function LogIntakeDialog({
     }
 
     try {
-      console.log('[LogIntake] payload:', payload)
-      const result = await createLog.mutateAsync(payload as Parameters<typeof createLog.mutateAsync>[0])
-      console.log('[LogIntake] result:', result)
-      if (!result.success) {
-        toast.error('Failed to save intake log. Please try again.')
-        console.error('createLog failed:', result.error)
-        return
+      if (isEdit && prePopulation.editingLogId) {
+        const result = await updateLog.mutateAsync({
+          id: prePopulation.editingLogId,
+          fields: payload as Parameters<typeof updateLog.mutateAsync>[0]['fields'],
+        })
+        if (!result.success) {
+          toast.error('Failed to update intake log. Please try again.')
+          return
+        }
+        toast.success('Intake log updated')
+        onSaved(result.data)
+      } else {
+        const result = await createLog.mutateAsync(payload as Parameters<typeof createLog.mutateAsync>[0])
+        if (!result.success) {
+          toast.error('Failed to save intake log. Please try again.')
+          return
+        }
+        toast.success('Intake logged')
+        onSaved(result.data)
       }
-      toast.success('Intake logged')
-      onSaved(result.data)
       onOpenChange(false)
     } catch (err) {
       toast.error('Failed to save intake log. Please try again.')
-      console.error('createLog error:', err)
+      console.error('LogIntake error:', err)
     }
   }
+
+  const isMutating = createLog.isPending || updateLog.isPending
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log Intake</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit Intake' : 'Log Intake'}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -258,11 +274,12 @@ export default function LogIntakeDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createLog.isPending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isMutating}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!canSave || createLog.isPending}>
-            Log Intake
+          <Button onClick={handleSave} disabled={!canSave || isMutating}>
+            {isMutating && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isEdit ? 'Update' : 'Log Intake'}
           </Button>
         </DialogFooter>
       </DialogContent>

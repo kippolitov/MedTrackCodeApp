@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Pill, Syringe, Wind, Droplets, Leaf } from 'lucide-react'
+import { Pill, Syringe, Wind, Droplets, Leaf, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -406,6 +406,7 @@ export default function MedicationForm({
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={!canSave || isSaving}>
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {mode === 'add' ? 'Save' : 'Update'}
           </Button>
         </DialogFooter>

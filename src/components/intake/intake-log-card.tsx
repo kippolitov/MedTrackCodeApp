@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -27,11 +27,12 @@ const STATUS_VARIANTS: Record<number, 'default' | 'secondary' | 'destructive' | 
 interface IntakeLogCardProps {
   log: Ppa_intakelogs
   onEdit: () => void
-  onDelete: () => void
+  onDelete: () => Promise<void>
 }
 
 export default function IntakeLogCard({ log, onEdit, onDelete }: IntakeLogCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loggedAt = new Date(log.ppa_loggedat)
   const timeLabel = `${String(loggedAt.getHours()).padStart(2, '0')}:${String(loggedAt.getMinutes()).padStart(2, '0')}`
@@ -77,14 +78,21 @@ export default function IntakeLogCard({ log, onEdit, onDelete }: IntakeLogCardPr
             Delete this intake log for <strong>{log.ppa_logname}</strong>?
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>Cancel</Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                setShowDeleteDialog(false)
-                onDelete()
+              disabled={isDeleting}
+              onClick={async () => {
+                setIsDeleting(true)
+                try {
+                  await onDelete()
+                  setShowDeleteDialog(false)
+                } finally {
+                  setIsDeleting(false)
+                }
               }}
             >
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </DialogFooter>
