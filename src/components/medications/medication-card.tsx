@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Trash2, Pill, Syringe, Wind, Droplets, Leaf, CalendarDays } from 'lucide-react'
+import { Pencil, Trash2, Pill, Syringe, Wind, Droplets, Leaf, CalendarDays, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
@@ -52,8 +52,8 @@ function formatReminderTime(raw: string): string {
 interface MedicationCardProps {
   medication: MedicationViewModel
   onEdit: (medication: MedicationViewModel) => void
-  onDelete: (medicationId: string) => void
-  onToggleActive: (medicationId: string, isActive: boolean) => void
+  onDelete: (medicationId: string) => Promise<void>
+  onToggleActive: (medicationId: string, isActive: boolean) => Promise<void>
 }
 
 const METHOD_ICONS: Record<number, React.ReactNode> = {
@@ -71,6 +71,8 @@ export default function MedicationCard({
   onToggleActive,
 }: MedicationCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isTogglingActive, setIsTogglingActive] = useState(false)
 
   const freqLabel = Ppa_medicationsppa_frequency[medication.ppa_frequency] ?? String(medication.ppa_frequency)
   const methodLabel = Ppa_medicationsppa_method[medication.ppa_method] ?? String(medication.ppa_method)
@@ -134,14 +136,21 @@ export default function MedicationCard({
           <Switch
             id={`active-${medication.ppa_medicationid}`}
             checked={medication.ppa_isactive}
-            onCheckedChange={(checked) =>
-              onToggleActive(medication.ppa_medicationid, checked)
-            }
+            disabled={isTogglingActive}
+            onCheckedChange={async (checked) => {
+              setIsTogglingActive(true)
+              try {
+                await onToggleActive(medication.ppa_medicationid, checked)
+              } finally {
+                setIsTogglingActive(false)
+              }
+            }}
             aria-label="Active"
           />
           <Label htmlFor={`active-${medication.ppa_medicationid}`} className="text-sm">
             Active
           </Label>
+          {isTogglingActive && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
         </div>
       </div>
 
@@ -154,16 +163,23 @@ export default function MedicationCard({
             Are you sure you want to delete <strong>{medication.ppa_name}</strong>? This cannot be undone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                setShowDeleteDialog(false)
-                onDelete(medication.ppa_medicationid)
+              disabled={isDeleting}
+              onClick={async () => {
+                setIsDeleting(true)
+                try {
+                  await onDelete(medication.ppa_medicationid)
+                  setShowDeleteDialog(false)
+                } finally {
+                  setIsDeleting(false)
+                }
               }}
             >
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </DialogFooter>

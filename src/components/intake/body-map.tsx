@@ -14,7 +14,7 @@ const SITE_POSITIONS: Record<Ppa_intakelogsppa_injectionsite, { x: number; y: nu
 interface BodyMapProps {
   recentSites: Ppa_intakelogsppa_injectionsite[]
   selectedSite: Ppa_intakelogsppa_injectionsite | undefined
-  onSiteSelect: (site: Ppa_intakelogsppa_injectionsite) => void
+  onSiteSelect: (site: Ppa_intakelogsppa_injectionsite | undefined) => void
 }
 
 export default function BodyMap({ recentSites, selectedSite, onSiteSelect }: BodyMapProps) {
@@ -37,8 +37,8 @@ export default function BodyMap({ recentSites, selectedSite, onSiteSelect }: Bod
           <rect x="34" y="72" width="14" height="50" rx="6" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.4" />
           <rect x="52" y="72" width="14" height="50" rx="6" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.4" />
 
-          {/* Orange dots for recently-used sites — pointer-events: none */}
-          {INJECTION_SITES.filter((s) => recentSet.has(s)).map((site) => (
+          {/* Orange dots for recently-used sites (skip if also selected) */}
+          {INJECTION_SITES.filter((s) => recentSet.has(s) && s !== selectedSite).map((site) => (
             <circle
               key={site}
               cx={SITE_POSITIONS[site].x}
@@ -46,39 +46,52 @@ export default function BodyMap({ recentSites, selectedSite, onSiteSelect }: Bod
               r="5"
               fill="orange"
               opacity="0.85"
-              pointer-events="none"
-              data-site-dot={site}
               className="pointer-events-none"
             />
           ))}
+
+          {/* Selected site indicator */}
+          {selectedSite !== undefined && (
+            <circle
+              cx={SITE_POSITIONS[selectedSite].x}
+              cy={SITE_POSITIONS[selectedSite].y}
+              r="7"
+              style={{ fill: 'var(--primary)', stroke: 'var(--background)', strokeWidth: 2 }}
+              className="pointer-events-none"
+            />
+          )}
         </svg>
       </div>
 
-      {/* Chip buttons */}
-      <div className="flex flex-wrap justify-center gap-2">
-        {INJECTION_SITES.map((site) => {
-          const isSelected = selectedSite === site
-          const isRecent = recentSet.has(site)
-          const label = getSiteLabel(site) + (isRecent ? ' (recent)' : '')
+      {/* Chip buttons — Row 1: hips, Row 2: abdominal */}
+      <div className="flex flex-col items-center gap-2">
+        {[INJECTION_SITES.slice(0, 2), INJECTION_SITES.slice(2)].map((row, rowIndex) => (
+          <div key={rowIndex} className="flex gap-2">
+            {row.map((site) => {
+              const isSelected = selectedSite === site
+              const isRecent = recentSet.has(site)
+              const label = getSiteLabel(site) + (isRecent ? ' (recent)' : '')
 
-          return (
-            <button
-              key={site}
-              type="button"
-              onClick={() => onSiteSelect(site)}
-              aria-pressed={isSelected}
-              aria-label={label}
-              className={cn(
-                'min-h-[44px] px-4 py-2 rounded-full border text-sm font-medium transition-colors',
-                isSelected
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background border-input hover:bg-muted'
-              )}
-            >
-              {label}
-            </button>
-          )
-        })}
+              return (
+                <button
+                  key={site}
+                  type="button"
+                  onClick={() => onSiteSelect(isSelected ? undefined : site)}
+                  aria-pressed={isSelected}
+                  aria-label={label}
+                  className={cn(
+                    'min-h-[44px] px-4 py-2 rounded-full border text-sm font-medium transition-colors',
+                    isSelected
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background border-input hover:bg-muted'
+                  )}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </div>
     </div>
   )

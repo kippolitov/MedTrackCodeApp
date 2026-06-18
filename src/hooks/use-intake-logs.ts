@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ppa_intakelogsService } from '@/generated/services/Ppa_intakelogsService'
-import type { Ppa_intakelogsBase } from '@/generated/models/Ppa_intakelogsModel'
+import type { Ppa_intakelogs, Ppa_intakelogsBase } from '@/generated/models/Ppa_intakelogsModel'
 
 const INTAKE_LOGS_SELECT = [
   'ppa_intakelogid',
@@ -59,8 +59,18 @@ export function useUpdateIntakeLog() {
   return useMutation({
     mutationFn: ({ id, fields }: { id: string; fields: Partial<Omit<Ppa_intakelogsBase, 'ppa_intakelogid'>> }) =>
       Ppa_intakelogsService.update(id, fields),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['intakelogs'] })
+    onSuccess: (_result, { id, fields }) => {
+      // Patch the in-memory cache immediately with the saved values.
+      queryClient.setQueriesData<Ppa_intakelogs[]>(
+        { queryKey: ['intakelogs'] },
+        (old) => old?.map((log) =>
+          log.ppa_intakelogid === id ? { ...log, ...fields } : log
+        )
+      )
+      // Mark stale without an immediate refetch: Dataverse option-set fields
+      // have a short replication delay, so an instant GET would overwrite the
+      // patch above with the old value. Stale queries re-fetch on next mount.
+      queryClient.invalidateQueries({ queryKey: ['intakelogs'], refetchType: 'none' })
     },
   })
 }

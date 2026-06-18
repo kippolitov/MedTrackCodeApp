@@ -220,7 +220,15 @@ export default function CalendarPage() {
                     <IntakeLogCard
                       log={log}
                       onEdit={() => {
-                        setPrePopulation({ calendarDate: selectedDate })
+                        setPrePopulation({
+                          editingLogId: log.ppa_intakelogid,
+                          medicationId: log._ppa_medication_value,
+                          loggedAt: new Date(log.ppa_loggedat),
+                          initialStatus: log.ppa_status,
+                          initialInjectionSite: log.ppa_injectionsite,
+                          initialNotes: log.ppa_notes,
+                          calendarDate: selectedDate ?? undefined,
+                        })
                         setLogIntakeOpen(true)
                       }}
                       onDelete={() => handleDelete(log.ppa_intakelogid)}

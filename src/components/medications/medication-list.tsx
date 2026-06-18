@@ -8,8 +8,8 @@ interface MedicationListProps {
   isLoading: boolean
   onAdd: () => void
   onEdit: (medication: MedicationViewModel) => void
-  onDelete: (medicationId: string) => void
-  onToggleActive: (medicationId: string, isActive: boolean) => void
+  onDelete: (medicationId: string) => Promise<void>
+  onToggleActive: (medicationId: string, isActive: boolean) => Promise<void>
 }
 
 export default function MedicationList({
