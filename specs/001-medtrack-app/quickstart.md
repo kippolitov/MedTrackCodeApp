@@ -29,8 +29,6 @@ npm run dev
 
 **Dataverse requirements**:
 - Authenticated Power Platform environment with the `Med Track Code App` published
-- `ppa_medications` table has the `ppa_validinjection_sites` text column added
-- `pac code` types regenerated after column addition
 - At least one user account for testing data isolation (two accounts for SC-008)
 
 ---
@@ -43,8 +41,7 @@ npm run dev
 
 1. Open `/medications` — expect empty state with "Add your first medication" CTA.
 2. Tap "Add Medication" — `<MedicationForm>` dialog opens with all fields empty; Active = on.
-3. Fill in: Name = "Methotrexate", Dosage = "15mg/0.6mL", Frequency = "Weekly", Scheduled Day = "Monday", Method = "Injection". Observe: Injection Sites section appears.
-4. Select sites: "Right Hip" and "Left Hip". Tap "Save".
+3. Fill in: Name = "Methotrexate", Dosage = "15mg/0.6mL", Frequency = "Weekly", Scheduled Day = "Monday", Method = "Injection". Tap "Save".
 5. Expect: dialog closes; Sonner success toast; medication appears in Active section with name, dosage badge, "Weekly" tag, "Injection" tag, "Monday" label, and no instructions row.
 6. Tap "Add Medication" again. Fill: Name = "Folic Acid", Dosage = "1mg", Frequency = "Daily", Method = "Pill". Tap "Save". Expect: appears in Active section.
 7. Tap edit (pencil) on Methotrexate. Change Dosage to "20mg/0.8mL". Tap "Update". Expect: updated dosage shown on card everywhere.
@@ -54,7 +51,6 @@ npm run dev
 ### Edge cases to verify
 
 - [ ] Changing Frequency from "Weekly" to "Daily": Scheduled Day field disappears; no saved value retained after switching back to "Weekly".
-- [ ] Changing Method from "Injection" to "Pill": Injection Sites section disappears; sites are cleared.
 - [ ] Saving without Name: Save button remains disabled.
 - [ ] Changing Method from "Injection" to "Pill": Save button is enabled (no site required for non-injection).
 
@@ -99,7 +95,7 @@ Taken intake logs; 1 intake log from yesterday that is Missed.
 ### Happy path (injection dose)
 
 1. Open LogIntakeDialog via standalone button.
-2. Select medication "Methotrexate" (Injection, 2 valid sites: Right Hip, Left Hip).
+2. Select medication "Methotrexate" (Injection method).
 3. Expect: Injection Site section appears. Tap "Show Body Map".
 4. Expect: silhouette figure visible. Right Hip shows orange dot (used 3 days ago = recent). Left Hip shows no dot (not recent).
 5. Tap "Right Hip" chip. Expect: chip highlights; "(recent)" suffix visible.

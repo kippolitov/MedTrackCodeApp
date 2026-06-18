@@ -39,8 +39,6 @@ select: ['ppa_medicationid', 'ppa_name', 'ppa_dosage', 'ppa_frequency',
 - `ppa_frequency`: required; must be one of the four valid option set values
 - `ppa_scheduledday`: required if frequency is Weekly or Biweekly; otherwise null/undefined
 - `ppa_method`: required; must be one of the five valid option set values
-- `ppa_validinjection_sites`: present and non-empty only when `ppa_method === 894250001`;
-  must parse to a non-empty array of valid `Ppa_intakelogsppa_injectionsite` keys
 - `ppa_remindertime`: when present, must match `HH:mm` format (00:00–23:59)
 
 ---
@@ -77,7 +75,7 @@ select: ['ppa_intakelogid', 'ppa_loggedat', 'ppa_scheduledfor', 'ppa_status',
 - `ppa_loggedat`: required; must be a valid ISO 8601 datetime
 - `ppa_scheduledfor`: required; set from the medication's reminder time on the logged date
 - `ppa_status`: required; must be one of the three valid option set values
-- `ppa_injectionsite`: required when the associated medication has `ppa_method === 894250001`; must be one of the five valid site keys AND must be in the medication's `ppa_validinjection_sites` list
+- `ppa_injectionsite`: required when the associated medication has `ppa_method === 894250001`; must be one of the five canonical valid site keys
 - `"ppa_Medication@odata.bind"`: required; format `/ppa_medications(<GUID>)`
 
 ---
@@ -179,5 +177,4 @@ Draft (in dialog, unsaved)
 Available (chip label, no dot)
   ← recently-used (within 7 days) ↔ not recently used
   → [Tap chip] → Selected (highlighted chip, site stored in draft log)
-  → [Auto-select] → Selected (when medication has exactly 1 valid site)
 ```
