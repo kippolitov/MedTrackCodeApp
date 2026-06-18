@@ -43,4 +43,5 @@ function Badge({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- shadcn/ui pattern: component + variants in one file
 export { Badge, badgeVariants }
