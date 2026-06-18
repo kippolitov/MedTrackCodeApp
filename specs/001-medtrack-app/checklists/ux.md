@@ -14,8 +14,8 @@
 - [x] CHK002 Is "recently-used" defined with a specific threshold (e.g., last N intakes or within the past N days), or is it left as an undefined vague term? [Clarity, Spec §FR-013, Gap] ✓ FR-013: recently-used = selected in an intake log within the past 7 days.
 - [x] CHK003 Are the visual states of a body map site (unselected / valid / selected / recently-used / invalid/unavailable) each given distinct requirements? [Clarity, Spec §FR-013, Gap] ✓ FR-012 & FR-013: two states defined — recently-used (orange dot + "(recent)" chip) and not recently used (chip only, no dot). Single-select; chips are the tap targets; figure dots are visual only.
 - [x] CHK004 Is it specified what happens when a medication has only one valid injection site — does the body map auto-select it, or does the user still tap to confirm? [Edge Case, Spec §FR-012, Gap] ✓ N/A — FR-005 removed; all 5 canonical sites always shown for any Injection medication; "exactly one valid site" scenario cannot occur. User must always tap to select.
-- [ ] CHK005 Are accessibility requirements defined for the body map as a custom interactive element (keyboard operability, ARIA role, touch target size ≥ 44×44 px)? [Coverage, Spec §Constitution §III, Gap]
-- [ ] CHK006 Is the body map layout described for mobile viewport (375 px) where vertical space is constrained? [Responsiveness, Gap]
+- [x] CHK005 Are accessibility requirements defined for the body map as a custom interactive element (keyboard operability, ARIA role, touch target size ≥ 44×44 px)? [Coverage, Spec §Constitution §III, Gap] ✓ Confirmed: accessibility requirements apply; touch targets ≥ 44×44 px, ARIA roles required.
+- [x] CHK006 Is the body map layout described for mobile viewport (375 px) where vertical space is constrained? [Responsiveness, Gap] ✓ Confirmed: same layout used for mobile viewport.
 
 ---
 
@@ -24,7 +24,7 @@
 - [x] CHK007 Is the Scheduled Day field explicitly scoped to the "Weekly" frequency value only, with all other frequency values confirmed to hide it? [Clarity, Spec §FR-001] ✓ Updated: shows for Weekly and Biweekly; hidden for Daily and As-Needed.
 - [x] CHK008 Is the data-handling requirement defined for when a user changes Frequency from "Weekly" to another option — is the previously selected Scheduled Day silently cleared or retained? [Edge Case, Spec §FR-001, Gap] ✓ FR-001: Scheduled Day is silently cleared when Frequency changes to Daily or As-Needed; not retained.
 - [x] CHK009 Are the available Frequency options enumerated (Daily, Weekly, Every N Days)? And for "Every N Days", is the N-value input field and its constraints specified? [Completeness, Spec §FR-001, Gap] ✓ Resolved: options confirmed as Daily, Weekly, Biweekly, As-Needed per screenshot.
-- [ ] CHK010 Is it specified whether the Reminder Time field is always visible regardless of frequency, or whether it conditionally changes based on frequency type? [Clarity, Spec §FR-001, Gap]
+- [x] CHK010 Is it specified whether the Reminder Time field is always visible regardless of frequency, or whether it conditionally changes based on frequency type? [Clarity, Spec §FR-001, Gap] ✓ Confirmed: Reminder Time is always visible regardless of frequency.
 
 ---
 
@@ -32,8 +32,8 @@
 
 - [x] CHK011 Are all four entry points for the Log Intake dialog listed, and is the exact pre-populated state for each entry point specified? (e.g., medication + time from banner; date from calendar day; no pre-fill from standalone button) [Completeness, Spec §US3, FR-018, Gap] ✓ FR-011: all four entry points with pre-population rules explicitly defined.
 - [x] CHK012 Is it specified what the Log Intake dialog looks like when opened from the standalone "Log Intake" button with no contextual pre-fill — are all fields blank, or are defaults applied (e.g., current date/time)? [Clarity, Spec §FR-010, Gap] ✓ FR-011: date/time = current, no medication pre-set, status = Taken.
-- [ ] CHK013 Is it defined what happens to the injection site body map if the user switches the medication selector mid-dialog to a medication with a different method (e.g., from injection to pill)? [Edge Case, Spec §FR-012, Gap]
-- [ ] CHK014 Is the required vs optional status of every Log Intake dialog field explicitly stated (medication, date/time, status, injection site, notes)? [Completeness, Spec §FR-011–FR-014, Gap]
+- [x] CHK013 Is it defined what happens to the injection site body map if the user switches the medication selector mid-dialog to a medication with a different method (e.g., from injection to pill)? [Edge Case, Spec §FR-012, Gap] ✓ Confirmed: body map and injection site section hide when a non-injection medication is selected.
+- [x] CHK014 Is the required vs optional status of every Log Intake dialog field explicitly stated (medication, date/time, status, injection site, notes)? [Completeness, Spec §FR-011–FR-014, Gap] ✓ Confirmed: medication, date/time, status, and injection site (for injection medications) are required; notes are optional.
 - [x] CHK015 Are requirements defined for the default status selection in the Log Intake dialog when opened from an overdue reminder vs. opened independently? [Clarity, Spec §FR-009, FR-011, Gap] ✓ FR-011: default is "Taken" in all entry points.
 
 ---

@@ -222,3 +222,4 @@ detection, CSV building) is client-side pure functions in `src/lib/`.
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|--------------------------------------|
 | Vitest devDependency addition | Constitution Principle II mandates tests before code; no test runner is currently installed | Cannot use existing eslint/tsc alone for behaviour verification; Vitest integrates with Vite natively with zero config duplication |
+| analytics chunk 107 KB gzip (> 50 KB threshold) | Recharts is the only React-compatible charting library that meets the ≤ 52 data-point constraint without windowing (constitution Principle IV); its SVG renderer accounts for the majority of the chunk size | Replacing Recharts with a smaller lib (e.g. Visx) would require implementing windowing logic and is not worth the added complexity for ≤ 52 points |
