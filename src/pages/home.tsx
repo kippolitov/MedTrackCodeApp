@@ -1,59 +1,70 @@
-import { useState } from "react"
-import powerAppsLogo from "/power-apps.svg"
-import reactLogo from "@/assets/react.svg"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { ModeToggle } from "@/components/mode-toggle"
-import { toast } from "sonner"
+import { format } from 'date-fns'
+import { Button } from '@/components/ui/button'
+import StatsBar from '@/components/dashboard/stats-bar'
+import ScheduleList from '@/components/dashboard/schedule-list'
+import OverdueBanner from '@/components/dashboard/overdue-banner'
+import LogIntakeDialog from '@/components/intake/log-intake-dialog'
+import { useAdherence } from '@/hooks/use-adherence'
+import { useOverdue } from '@/hooks/use-overdue'
+import { useUser } from '@/hooks/use-user'
+import { useUiStore } from '@/stores/ui-store'
+import { useLogIntakeStore } from '@/stores/log-intake-store'
+import type { Ppa_medications } from '@/generated/models/Ppa_medicationsModel'
 
 export default function HomePage() {
-  const [count, setCount] = useState(0)
+  const { stats, isLoading } = useAdherence()
+  const overdueMedications = useOverdue()
+  const { firstName } = useUser()
+
+  const now = new Date()
+  const hour = now.getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  const { isLogIntakeOpen, setLogIntakeOpen } = useUiStore()
+  const { prePopulation, setPrePopulation, clearPrePopulation } = useLogIntakeStore()
+
+  function handleLog(medication: Ppa_medications) {
+    setPrePopulation({ medicationId: medication.ppa_medicationid, dateTime: new Date() })
+    setLogIntakeOpen(true)
+  }
+
+  function handleStandaloneLog() {
+    setPrePopulation({ dateTime: new Date() })
+    setLogIntakeOpen(true)
+  }
 
   return (
-    <div className="h-full grid place-items-center">
-      <div className="w-full max-w-7xl px-8 text-center flex flex-col items-center space-y-6">
-
-        <div className="flex items-center justify-center space-x-8">
-          <a href="https://github.com/microsoft/PowerAppsCodeApps" target="_blank" rel="noreferrer noopener">
-            <img
-              src={powerAppsLogo}
-              className="h-24 w-24 transition-transform hover:scale-105"
-              alt="Power Apps logo"
-            />
-          </a>
-          <a href="https://react.dev" target="_blank" rel="noreferrer noopener">
-            <img
-              src={reactLogo}
-              className="h-24 w-24 transition-transform hover:scale-105 motion-safe:animate-[spin_20s_linear_infinite]"
-              alt="React logo"
-            />
-          </a>
-        </div>
-
-        <h1 className="text-5xl leading-tight tracking-tight">Power + Code</h1>
-
-        <Card>
-          <CardContent className="flex flex-col items-center space-y-4">
-            <Button variant="outline" onClick={() => setCount((c) => c + 1)}>
-              count is {count}
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Edit <code className="text-foreground">src/App.tsx</code> and save to test HMR
-            </p>
-          </CardContent>
-        </Card>
-
-        <div className="flex items-center justify-center gap-4">
-          <Button variant="outline" onClick={() => toast.info("Hello from Power Apps!")}>
-            !
-          </Button>
-          <ModeToggle />
-        </div>
-
-        <p className="text-muted-foreground text-sm">
-          Click on the Power Apps and React logos to learn more
+    <div className="p-4 md:p-6 max-w-2xl mx-auto flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-bold">
+          {greeting}{firstName ? `, ${firstName}` : ''}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {format(now, 'EEEE, MMMM d, yyyy')}
         </p>
       </div>
+
+      {overdueMedications.length > 0 && (
+        <OverdueBanner overdueMedications={overdueMedications} onLog={handleLog} />
+      )}
+
+      <StatsBar stats={stats} isLoading={isLoading} />
+
+      <section>
+        <h2 className="font-semibold mb-3">Today's Schedule</h2>
+        <ScheduleList onLog={handleLog} />
+      </section>
+
+      <Button variant="outline" className="w-full" onClick={handleStandaloneLog}>
+        Log Intake
+      </Button>
+
+      <LogIntakeDialog
+        open={isLogIntakeOpen}
+        onOpenChange={setLogIntakeOpen}
+        prePopulation={prePopulation}
+        onSaved={() => clearPrePopulation()}
+      />
     </div>
   )
 }

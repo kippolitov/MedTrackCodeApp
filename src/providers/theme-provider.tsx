@@ -18,6 +18,7 @@ const initialState: ThemeProviderState = {
   setTheme: () => null,
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context and provider must share this file
 export const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
