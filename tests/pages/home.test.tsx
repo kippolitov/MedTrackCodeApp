@@ -5,6 +5,10 @@ import { MemoryRouter } from 'react-router-dom'
 import HomePage from '@/pages/home'
 import { useUiStore } from '@/stores/ui-store'
 
+vi.mock('@/hooks/use-user', () => ({
+  useUser: () => ({ fullName: null, firstName: null }),
+}))
+
 vi.mock('@/generated/services/Ppa_medicationsService', () => ({
   Ppa_medicationsService: {
     getAll: vi.fn(),

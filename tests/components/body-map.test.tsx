@@ -56,7 +56,6 @@ describe('BodyMap', () => {
     // The SVG dots should have pointer-events: none
     const dots = container.querySelectorAll('[data-site-dot]')
     dots.forEach((dot) => {
-      const style = window.getComputedStyle(dot as HTMLElement)
       // Check class or inline style
       expect((dot as HTMLElement).classList.contains('pointer-events-none') ||
              (dot as SVGElement).getAttribute('pointer-events') === 'none').toBe(true)
