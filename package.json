@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bash -c 'output=$(pac code run 2>&1); printf \"%s\\n\" \"$output\" | sed \"s|http://localhost|https://localhost|g\" && vite'",
+    "dev": "vite",
+    "dev:live": "pac code run",
     "build": "tsc -b && vite build && pac code push",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -2,7 +2,7 @@ import {
   startOfDay,
   endOfDay,
   isSameDay,
-  differenceInCalendarWeeks,
+  differenceInWeeks,
   parseISO,
 } from 'date-fns'
 
@@ -19,7 +19,7 @@ export function isSameLocalDay(a: Date, b: Date): boolean {
 }
 
 export function weeksBetween(start: Date, end: Date): number {
-  return Math.abs(differenceInCalendarWeeks(end, start))
+  return Math.abs(differenceInWeeks(end, start))
 }
 
 export function parseISOLocal(iso: string): Date {

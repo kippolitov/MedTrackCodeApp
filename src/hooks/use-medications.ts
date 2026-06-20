@@ -12,16 +12,23 @@ const MEDICATIONS_SELECT = [
   'ppa_remindertime',
   'ppa_instructions',
   'ppa_isactive',
+  'ppa_startdate',
+  'ppa_sortorder',
+  'createdon',
 ] as const
 
-export function useMedications() {
+export function useMedications(options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: ['medications'],
     queryFn: async () => {
-      const result = await Ppa_medicationsService.getAll({ select: [...MEDICATIONS_SELECT] })
+      const result = await Ppa_medicationsService.getAll({
+        select: [...MEDICATIONS_SELECT],
+        filter: 'statecode eq 0',
+      })
       return result.data ?? []
     },
     staleTime: 5 * 60 * 1000,
+    ...options,
   })
 }
 

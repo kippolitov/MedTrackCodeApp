@@ -17,9 +17,10 @@ interface UseIntakeLogsOptions {
   from: Date
   to: Date
   medicationId?: string
+  refetchInterval?: number
 }
 
-export function useIntakeLogs({ from, to, medicationId }: UseIntakeLogsOptions) {
+export function useIntakeLogs({ from, to, medicationId, refetchInterval }: UseIntakeLogsOptions) {
   const fromISO = from.toISOString()
   const toISO = to.toISOString()
 
@@ -40,6 +41,7 @@ export function useIntakeLogs({ from, to, medicationId }: UseIntakeLogsOptions) 
       return result.data ?? []
     },
     staleTime: 30_000,
+    ...(refetchInterval ? { refetchInterval } : {}),
   })
 }
 

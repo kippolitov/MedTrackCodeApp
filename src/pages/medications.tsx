@@ -35,8 +35,16 @@ export default function MedicationsPage() {
 
   async function handleDelete(medicationId: string) {
     const med = medications.find((m) => m.ppa_medicationid === medicationId)
-    await deleteMed.mutateAsync(medicationId)
-    toast.success(`${med?.ppa_name ?? 'Medication'} deleted`)
+    try {
+      await deleteMed.mutateAsync(medicationId)
+      toast.success(`${med?.ppa_name ?? 'Medication'} deleted`)
+    } catch (err) {
+      console.error('Delete medication error:', err)
+      toast.error(
+        `Cannot delete ${med?.ppa_name ?? 'this medication'} while it has intake logs. ` +
+        'Deactivate it instead, or delete its logs first.'
+      )
+    }
   }
 
   async function handleToggleActive(medicationId: string, isActive: boolean) {

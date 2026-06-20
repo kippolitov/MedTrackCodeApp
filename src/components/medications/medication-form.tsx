@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Pill, Syringe, Wind, Droplets, Leaf, Loader2 } from 'lucide-react'
 import {
   Dialog,
@@ -26,7 +26,8 @@ import type {
   Ppa_medicationsppa_scheduledday,
 } from '@/generated/models/Ppa_medicationsModel'
 import { Ppa_medicationsppa_scheduledday as ScheduledDayEnum } from '@/generated/models/Ppa_medicationsModel'
-import { useCreateMedication, useUpdateMedication } from '@/hooks/use-medications'
+import { toast } from 'sonner'
+import { useCreateMedication, useUpdateMedication, useMedications } from '@/hooks/use-medications'
 
 export type MedicationViewModel = Ppa_medications
 
@@ -69,27 +70,6 @@ const DAY_OPTIONS: Array<{ value: DayKey; label: string }> = [
   { value: 894250006, label: 'Sunday' },
 ]
 
-const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i + 1)) // "1".."12"
-const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0')) // "00","05".."55"
-type Period = 'AM' | 'PM'
-
-// Reminder time is stored as a 24-hour "HH:mm" string. These helpers convert
-// to/from the 12-hour hour/minute/period parts shown in the dropdowns.
-function parseTimeParts(value: string): { hour12: string; minute: string; period: Period } {
-  const m = value.match(/^(\d{1,2}):(\d{2})/)
-  if (!m) return { hour12: '', minute: '', period: 'AM' }
-  const h = Number(m[1])
-  if (isNaN(h)) return { hour12: '', minute: '', period: 'AM' }
-  const period: Period = h >= 12 ? 'PM' : 'AM'
-  return { hour12: String(h % 12 || 12), minute: m[2], period }
-}
-
-function buildTime(hour12: string, minute: string, period: Period): string {
-  if (!hour12 || !minute) return ''
-  let h = Number(hour12) % 12
-  if (period === 'PM') h += 12
-  return `${String(h).padStart(2, '0')}:${minute}`
-}
 
 function emptyForm() {
   return {
@@ -99,6 +79,7 @@ function emptyForm() {
     scheduledDay: null as DayKey | null,
     method: null as MethodKey | null,
     reminderTime: '',
+    startDate: '',
     instructions: '',
     isActive: true,
   }
@@ -112,11 +93,15 @@ export default function MedicationForm({
   onSaved,
 }: MedicationFormProps) {
   const [form, setForm] = useState(emptyForm)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const isDirtyRef = useRef(false)
   const createMed = useCreateMedication()
   const updateMed = useUpdateMedication()
+  const { data: allMedications = [] } = useMedications()
 
   useEffect(() => {
     if (open) {
+      isDirtyRef.current = false
       if (mode === 'edit' && initialValues) {
         setForm({
           name: initialValues.ppa_name,
@@ -143,6 +128,7 @@ export default function MedicationForm({
           })(),
           method: initialValues.ppa_method,
           reminderTime: initialValues.ppa_remindertime ?? '',
+          startDate: initialValues.ppa_startdate ?? '',
           instructions: initialValues.ppa_instructions ?? '',
           isActive: initialValues.ppa_isactive,
         })
@@ -165,9 +151,11 @@ export default function MedicationForm({
     form.name.trim() !== '' &&
     form.dosage.trim() !== '' &&
     form.frequency !== null &&
-    form.method !== null
+    form.method !== null &&
+    (!showScheduledDay || form.scheduledDay !== null)
 
   function handleFrequencyChange(val: string) {
+    isDirtyRef.current = true
     const freq = Number(val) as FreqKey
     const clearDay = freq !== 894250001 && freq !== 894250002
     setForm((f) => ({
@@ -177,27 +165,27 @@ export default function MedicationForm({
     }))
   }
 
-  const timeParts = parseTimeParts(form.reminderTime)
-  // If existing data has a minute that isn't a 5-minute step, surface it as an option.
-  const minuteOptions =
-    timeParts.minute && !MINUTE_OPTIONS.includes(timeParts.minute)
-      ? [...MINUTE_OPTIONS, timeParts.minute].sort()
-      : MINUTE_OPTIONS
-
-  function setTimePart(part: Partial<{ hour12: string; minute: string; period: Period }>) {
-    const next = { ...timeParts, ...part }
-    // Default the complementary part so a single selection commits a full time.
-    if (next.hour12 && !next.minute) next.minute = '00'
-    if (next.minute && !next.hour12) next.hour12 = '12'
-    setForm((f) => ({ ...f, reminderTime: buildTime(next.hour12, next.minute, next.period) }))
-  }
-
-  function clearReminderTime() {
-    setForm((f) => ({ ...f, reminderTime: '' }))
+  function requestClose() {
+    // In edit mode, confirm before discarding unsaved changes
+    if (mode === 'edit' && isDirtyRef.current) {
+      setShowDiscardConfirm(true)
+    } else {
+      onOpenChange(false)
+    }
   }
 
   async function handleSave() {
     if (!canSave || form.frequency === null || form.method === null) return
+
+    const normalizedName = form.name.trim().toLowerCase()
+    const duplicate = allMedications.find(
+      (m) =>
+        m.ppa_name?.toLowerCase() === normalizedName &&
+        m.ppa_medicationid !== initialValues?.ppa_medicationid
+    )
+    if (duplicate) {
+      toast.warning(`A medication named "${duplicate.ppa_name}" already exists.`)
+    }
 
     const payload = {
       ppa_name: form.name.trim(),
@@ -206,27 +194,48 @@ export default function MedicationForm({
       ppa_scheduledday: form.scheduledDay ?? undefined,
       ppa_method: form.method,
       ppa_remindertime: form.reminderTime || undefined,
+      ppa_startdate: form.startDate || undefined,
       ppa_instructions: form.instructions || undefined,
       ppa_isactive: form.isActive,
     }
 
-    if (mode === 'add') {
-      const result = await createMed.mutateAsync(payload as Parameters<typeof createMed.mutateAsync>[0])
-      onSaved(result.data)
-    } else if (mode === 'edit' && initialValues) {
-      const result = await updateMed.mutateAsync({
-        id: initialValues.ppa_medicationid,
-        fields: payload,
-      })
-      onSaved(result.data)
+    try {
+      if (mode === 'add') {
+        const result = await createMed.mutateAsync(payload as Parameters<typeof createMed.mutateAsync>[0])
+        onSaved(result.data)
+      } else if (mode === 'edit' && initialValues) {
+        const result = await updateMed.mutateAsync({
+          id: initialValues.ppa_medicationid,
+          fields: payload,
+        })
+        onSaved(result.data)
+      }
+      onOpenChange(false)
+    } catch (err) {
+      console.error('Save medication error:', err)
+      toast.error('Failed to save medication. Please try again.')
     }
-    onOpenChange(false)
   }
 
   const isSaving = createMed.isPending || updateMed.isPending
 
+  function updateForm(updater: (f: ReturnType<typeof emptyForm>) => ReturnType<typeof emptyForm>) {
+    isDirtyRef.current = true
+    setForm(updater)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          requestClose()
+        } else {
+          onOpenChange(true)
+        }
+      }}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === 'add' ? 'Add Medication' : 'Edit Medication'}</DialogTitle>
@@ -238,7 +247,7 @@ export default function MedicationForm({
             <Input
               id="med-name"
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(e) => updateForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Aspirin"
               aria-label="Name"
             />
@@ -249,8 +258,8 @@ export default function MedicationForm({
             <Input
               id="med-dosage"
               value={form.dosage}
-              onChange={(e) => setForm((f) => ({ ...f, dosage: e.target.value }))}
-              placeholder="e.g. 100mg"
+              onChange={(e) => updateForm((f) => ({ ...f, dosage: e.target.value }))}
+              placeholder="e.g. 100mg or 40mg/0.8mL"
               aria-label="Dosage"
             />
           </div>
@@ -280,7 +289,7 @@ export default function MedicationForm({
               <Select
                 value={form.scheduledDay !== null ? String(form.scheduledDay) : ''}
                 onValueChange={(val) =>
-                  setForm((f) => ({ ...f, scheduledDay: Number(val) as DayKey }))
+                  updateForm((f) => ({ ...f, scheduledDay: Number(val) as DayKey }))
                 }
               >
                 <SelectTrigger id="med-scheduledday" aria-label="Scheduled Day" className="w-full">
@@ -302,7 +311,7 @@ export default function MedicationForm({
             <Select
               value={form.method !== null ? String(form.method) : ''}
               onValueChange={(val) =>
-                setForm((f) => ({ ...f, method: Number(val) as MethodKey }))
+                updateForm((f) => ({ ...f, method: Number(val) as MethodKey }))
               }
             >
               <SelectTrigger id="med-method" aria-label="Method" className="w-full">
@@ -319,58 +328,39 @@ export default function MedicationForm({
             </Select>
           </div>
 
+          {form.frequency === 894250002 && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="med-startdate">Start Date (optional)</Label>
+              <Input
+                id="med-startdate"
+                type="date"
+                value={form.startDate}
+                onChange={(e) => updateForm((f) => ({ ...f, startDate: e.target.value }))}
+                aria-label="Start date"
+              />
+              <p className="text-xs text-muted-foreground">
+                Sets the week-0 anchor for biweekly scheduling. Leave blank to use the record creation date.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5">
-            <Label>Reminder Time (optional)</Label>
+            <Label htmlFor="med-reminder-time">Reminder Time (optional)</Label>
             <div className="flex items-center gap-2">
-              <Select
-                value={timeParts.hour12}
-                onValueChange={(val) => setTimePart({ hour12: val })}
-              >
-                <SelectTrigger aria-label="Reminder hour" className="flex-1">
-                  <SelectValue placeholder="Hour" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HOUR_OPTIONS.map((h) => (
-                    <SelectItem key={h} value={h}>
-                      {h}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-muted-foreground">:</span>
-              <Select
-                value={timeParts.minute}
-                onValueChange={(val) => setTimePart({ minute: val })}
-              >
-                <SelectTrigger aria-label="Reminder minute" className="flex-1">
-                  <SelectValue placeholder="Min" />
-                </SelectTrigger>
-                <SelectContent>
-                  {minuteOptions.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={timeParts.period}
-                onValueChange={(val) => setTimePart({ period: val as Period })}
-              >
-                <SelectTrigger aria-label="Reminder AM/PM" className="flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="AM">AM</SelectItem>
-                  <SelectItem value="PM">PM</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="med-reminder-time"
+                type="time"
+                value={form.reminderTime}
+                onChange={(e) => updateForm((f) => ({ ...f, reminderTime: e.target.value }))}
+                aria-label="Reminder time"
+                className="flex-1"
+              />
               {form.reminderTime && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={clearReminderTime}
+                  onClick={() => updateForm((f) => ({ ...f, reminderTime: '' }))}
                   aria-label="Clear reminder time"
                 >
                   Clear
@@ -384,7 +374,7 @@ export default function MedicationForm({
             <Textarea
               id="med-instructions"
               value={form.instructions}
-              onChange={(e) => setForm((f) => ({ ...f, instructions: e.target.value }))}
+              onChange={(e) => updateForm((f) => ({ ...f, instructions: e.target.value }))}
               placeholder="Special handling notes"
               aria-label="Instructions"
             />
@@ -394,7 +384,7 @@ export default function MedicationForm({
             <Switch
               id="med-isactive"
               checked={form.isActive}
-              onCheckedChange={(checked) => setForm((f) => ({ ...f, isActive: checked }))}
+              onCheckedChange={(checked) => updateForm((f) => ({ ...f, isActive: checked }))}
               aria-label="Active"
             />
             <Label htmlFor="med-isactive">Active</Label>
@@ -402,7 +392,7 @@ export default function MedicationForm({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+          <Button variant="outline" onClick={requestClose} disabled={isSaving}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={!canSave || isSaving}>
@@ -412,5 +402,24 @@ export default function MedicationForm({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Discard confirmation — shown in edit mode when Cancel is clicked with unsaved changes (C-14) */}
+    <Dialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+      <DialogContent showCloseButton={false} className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Discard changes?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">Your unsaved changes will be lost.</p>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowDiscardConfirm(false)}>
+            Keep editing
+          </Button>
+          <Button variant="destructive" onClick={() => { setShowDiscardConfirm(false); onOpenChange(false) }}>
+            Discard
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

@@ -14,6 +14,7 @@ import { useMedications } from '@/hooks/use-medications'
 import { useIntakeLogs } from '@/hooks/use-intake-logs'
 import { downloadCsv } from '@/lib/csv-export'
 import { scheduledDosesOnDay, takenLogsOnDay } from '@/lib/adherence'
+import { getSiteLabel } from '@/lib/injection-sites'
 import type { AdherenceDataPoint } from '@/lib/adherence'
 import type { IntakeLogRow } from '@/lib/csv-export'
 
@@ -44,7 +45,7 @@ export default function AnalyticsPage() {
     () =>
       medicationId === 'all'
         ? logs
-        : logs.filter((l) => l['ppa_Medication@odata.bind']?.includes(medicationId)),
+        : logs.filter((l) => l._ppa_medication_value === medicationId),
     [logs, medicationId]
   )
 
@@ -80,16 +81,28 @@ export default function AnalyticsPage() {
   }, [filteredLogs, filteredMeds, from, today])
 
   const perMedStats = useMemo(() => {
+    // Pre-group taken days by medication ID for O(1) lookup per (med, day) pair
+    const takenDaysByMed = new Map<string, Set<string>>()
+    for (const log of logs) {
+      if (log.ppa_status !== 894250000 || !log._ppa_medication_value) continue
+      const key = log.ppa_loggedat.slice(0, 10)
+      if (!takenDaysByMed.has(log._ppa_medication_value)) {
+        takenDaysByMed.set(log._ppa_medication_value, new Set())
+      }
+      takenDaysByMed.get(log._ppa_medication_value)!.add(key)
+    }
+
     return medications.map((med) => {
-      const medLogs = logs.filter((l) =>
-        l['ppa_Medication@odata.bind']?.includes(med.ppa_medicationid)
-      )
+      const medId = med.ppa_medicationid
+      const takenDays = takenDaysByMed.get(medId) ?? new Set<string>()
       let scheduled = 0
       let taken = 0
       const cursor = new Date(from)
       while (cursor <= today) {
-        scheduled += scheduledDosesOnDay([med], cursor).length
-        taken += takenLogsOnDay(medLogs, cursor).length
+        if (scheduledDosesOnDay([med], cursor).length > 0) {
+          scheduled++
+          if (takenDays.has(cursor.toISOString().slice(0, 10))) taken++
+        }
         cursor.setDate(cursor.getDate() + 1)
       }
       const adherencePercent = scheduled === 0 ? 0 : Math.round((taken / scheduled) * 100)
@@ -104,14 +117,12 @@ export default function AnalyticsPage() {
       894250002: 'Missed',
     }
     const rows: IntakeLogRow[] = filteredLogs.map((l) => {
-      const med = medications.find((m) =>
-        l['ppa_Medication@odata.bind']?.includes(m.ppa_medicationid)
-      )
+      const med = medications.find((m) => m.ppa_medicationid === l._ppa_medication_value)
       return {
         medicationName: med?.ppa_name ?? l.ppa_logname,
         loggedAt: new Date(l.ppa_loggedat),
         status: statusMap[Number(l.ppa_status)] ?? String(l.ppa_status),
-        injectionSite: l.ppa_injectionsite != null ? String(l.ppa_injectionsite) : undefined,
+        injectionSite: l.ppa_injectionsite != null ? getSiteLabel(l.ppa_injectionsite) : undefined,
         notes: l.ppa_notes,
       }
     })

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/style.css'
@@ -15,6 +15,7 @@ import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
 export default function CalendarPage() {
   const [viewedMonth, setViewedMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
+  const dayPanelRef = useRef<HTMLElement>(null)
 
   const { isLogIntakeOpen, setLogIntakeOpen } = useUiStore()
   const { prePopulation, setPrePopulation, clearPrePopulation } = useLogIntakeStore()
@@ -66,6 +67,8 @@ export default function CalendarPage() {
   function handleDayClick(day: Date) {
     setSelectedDate(day)
     useUiStore.getState().setSelectedCalendarDate(day)
+    // Scroll day panel into view on mobile after state updates
+    setTimeout(() => dayPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
   }
 
   // Click delegation: DayPicker puts data-day on <td> elements, so we catch
@@ -92,7 +95,16 @@ export default function CalendarPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Calendar</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Calendar</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => { setViewedMonth(new Date()); setSelectedDate(new Date()) }}
+        >
+          Today
+        </Button>
+      </div>
 
       <div className="flex flex-col md:flex-row gap-6">
         <div className="flex-1">
@@ -150,6 +162,9 @@ export default function CalendarPage() {
                     if (modifiers.outside) cellStyle.opacity = 0.3
 
                     const hasLog = modifiers['has-taken'] || modifiers['has-missed'] || modifiers['has-skipped'] || modifiers['mixed']
+                    if (hasLog) {
+                      cellStyle.color = 'white'
+                    }
                     const dotColor = modifiers['mixed'] ? '#f97316'
                       : modifiers['has-taken'] ? '#22c55e'
                       : modifiers['has-missed'] ? '#ef4444'
@@ -200,6 +215,7 @@ export default function CalendarPage() {
 
         {selectedDate && (
           <aside
+            ref={dayPanelRef}
             role="region"
             aria-label="Day detail"
             className="w-full md:w-72 border rounded-lg p-4 flex flex-col gap-3"

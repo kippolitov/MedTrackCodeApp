@@ -5,13 +5,13 @@ import { startOfLocalDay, endOfLocalDay } from '@/lib/date-utils'
 import { adherence7d, currentStreak, missedToday } from '@/lib/adherence'
 import type { AdherenceStats } from '@/lib/adherence'
 
-export function useAdherence(): { stats: AdherenceStats; isLoading: boolean } {
+export function useAdherence(): { stats: AdherenceStats; isLoading: boolean; isError: boolean } {
   const today = new Date()
   const sevenDaysAgo = new Date(today)
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
 
-  const { data: medications = [], isLoading: medsLoading } = useMedications()
-  const { data: logs = [], isLoading: logsLoading } = useIntakeLogs({
+  const { data: medications = [], isLoading: medsLoading, isError: medsError } = useMedications()
+  const { data: logs = [], isLoading: logsLoading, isError: logsError } = useIntakeLogs({
     from: startOfLocalDay(sevenDaysAgo),
     to: endOfLocalDay(today),
   })
@@ -26,5 +26,5 @@ export function useAdherence(): { stats: AdherenceStats; isLoading: boolean } {
     }
   }, [medications, logs])
 
-  return { stats, isLoading: medsLoading || logsLoading }
+  return { stats, isLoading: medsLoading || logsLoading, isError: medsError || logsError }
 }
