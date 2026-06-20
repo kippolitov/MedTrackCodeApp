@@ -1,3 +1,4 @@
+import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -23,9 +24,7 @@ vi.mock('@/lib/csv-export', () => ({
 }))
 
 // Stub recharts so it renders without canvas issues in happy-dom
-vi.mock('recharts', () => {
-  const React = require('react')
-  return {
+vi.mock('recharts', () => ({
     BarChart: ({ children }: { children: React.ReactNode }) =>
       React.createElement('div', { 'data-testid': 'bar-chart' }, children),
     Bar: () => null,
@@ -35,8 +34,7 @@ vi.mock('recharts', () => {
     Tooltip: () => null,
     ResponsiveContainer: ({ children }: { children: React.ReactNode }) =>
       React.createElement('div', null, children),
-  }
-})
+}))
 
 function makeMed(id: string, name: string) {
   return {

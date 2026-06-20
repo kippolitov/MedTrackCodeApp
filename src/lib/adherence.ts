@@ -59,11 +59,8 @@ export function scheduledDosesOnDay(
         return dateToDayEnum(date) === Number(med.ppa_scheduledday)
       }
       case 894250002: { // Biweekly
-        // ppa_startdate lets users set their actual first-dose date;
-        // fall back to createdon when it's not set.
-        const anchorStr = med.ppa_startdate ?? med.createdon
-        if (!anchorStr) return false
-        const start = new Date(anchorStr)
+        if (!med.ppa_startdate) return true // no anchor set — show every occurrence
+        const start = new Date(med.ppa_startdate)
         if (date < startOfLocalDay(start)) return false
         const weeks = weeksBetween(start, date)
         return weeks % 2 === 0
