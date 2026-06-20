@@ -7,13 +7,12 @@ import type { OverdueMedication } from '@/lib/adherence'
 export function useOverdue(): OverdueMedication[] {
   const today = new Date()
 
-  const { data: medications = [] } = useMedications()
-  const { data: logs = [] } = useIntakeLogs(
-    {
-      from: startOfLocalDay(today),
-      to: endOfLocalDay(today),
-    },
-  )
+  const { data: medications = [] } = useMedications({ refetchInterval: 60_000 })
+  const { data: logs = [] } = useIntakeLogs({
+    from: startOfLocalDay(today),
+    to: endOfLocalDay(today),
+    refetchInterval: 30_000,
+  })
 
   return useMemo<OverdueMedication[]>(() => {
     const now = new Date()

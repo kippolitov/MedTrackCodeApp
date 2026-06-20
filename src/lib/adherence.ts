@@ -59,10 +59,14 @@ export function scheduledDosesOnDay(
         return dateToDayEnum(date) === Number(med.ppa_scheduledday)
       }
       case 894250002: { // Biweekly
-        if (!med.createdon) return false
-        const start = new Date(med.createdon)
+        // ppa_startdate lets users set their actual first-dose date;
+        // fall back to createdon when it's not set.
+        const anchorStr = med.ppa_startdate ?? med.createdon
+        if (!anchorStr) return false
+        const start = new Date(anchorStr)
+        if (date < startOfLocalDay(start)) return false
         const weeks = weeksBetween(start, date)
-        return Math.floor(weeks % 2) === 0
+        return weeks % 2 === 0
       }
       case 894250003: // As-Needed
         return false
@@ -83,6 +87,19 @@ export function takenLogsOnDay(
   )
 }
 
+// Counts distinct medication IDs with at least one Taken log on the given day.
+// Using distinct IDs (rather than raw log count) prevents duplicate submissions
+// from inflating adherence above 100%.
+function distinctTakenCountOnDay(logs: Ppa_intakelogs[], date: Date): number {
+  const ids = new Set<string>()
+  for (const log of logs) {
+    if (log.ppa_status === 894250000 && log._ppa_medication_value && isSameLocalDay(new Date(log.ppa_loggedat), date)) {
+      ids.add(log._ppa_medication_value)
+    }
+  }
+  return ids.size
+}
+
 export function adherence7d(
   medications: Ppa_medications[],
   logs: Ppa_intakelogs[],
@@ -97,7 +114,7 @@ export function adherence7d(
 
     const scheduled = scheduledDosesOnDay(medications, day)
     scheduledTotal += scheduled.length
-    takenTotal += takenLogsOnDay(logs, day).length
+    takenTotal += distinctTakenCountOnDay(logs, day)
   }
 
   if (scheduledTotal === 0) return null
@@ -119,8 +136,7 @@ export function currentStreak(
     const scheduled = scheduledDosesOnDay(medications, checkDay)
     if (scheduled.length === 0) continue // rest day — skip
 
-    const taken = takenLogsOnDay(logs, checkDay)
-    if (taken.length < scheduled.length) break // missed — streak ends
+    if (distinctTakenCountOnDay(logs, checkDay) < scheduled.length) break // missed — streak ends
 
     streak++
   }
@@ -134,6 +150,5 @@ export function missedToday(
   referenceDate: Date = new Date()
 ): number {
   const scheduled = scheduledDosesOnDay(medications, referenceDate)
-  const taken = takenLogsOnDay(logs, referenceDate)
-  return Math.max(0, scheduled.length - taken.length)
+  return Math.max(0, scheduled.length - distinctTakenCountOnDay(logs, referenceDate))
 }

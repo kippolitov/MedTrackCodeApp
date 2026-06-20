@@ -26,15 +26,18 @@ function StatTile({ label, value, isLoading }: StatTileProps) {
 }
 
 export default function StatsBar({ stats, isLoading }: StatsBarProps) {
-  const adherenceLabel =
-    stats.adherencePercent7d !== null ? `${stats.adherencePercent7d}%` : '—'
+  const noMeds = !isLoading && stats.activeMedicationCount === 0
+  const adherenceLabel = noMeds || stats.adherencePercent7d === null ? '—' : `${stats.adherencePercent7d}%`
+  const streakLabel    = noMeds ? '—' : `${stats.streak}d`
+  const missedLabel    = noMeds ? '—' : String(stats.missedToday)
+  const activeLabel    = noMeds ? '—' : String(stats.activeMedicationCount)
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       <StatTile label="7-day Adherence" value={adherenceLabel} isLoading={isLoading} />
-      <StatTile label="Streak" value={`${stats.streak}d`} isLoading={isLoading} />
-      <StatTile label="Missed today" value={String(stats.missedToday)} isLoading={isLoading} />
-      <StatTile label="Active medications" value={String(stats.activeMedicationCount)} isLoading={isLoading} />
+      <StatTile label="Streak"          value={streakLabel}    isLoading={isLoading} />
+      <StatTile label="Missed today"    value={missedLabel}    isLoading={isLoading} />
+      <StatTile label="Active meds"     value={activeLabel}    isLoading={isLoading} />
     </div>
   )
 }

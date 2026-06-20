@@ -20,8 +20,10 @@ export default function MedicationList({
   onDelete,
   onToggleActive,
 }: MedicationListProps) {
-  const active = medications.filter((m) => m.ppa_isactive)
-  const inactive = medications.filter((m) => !m.ppa_isactive)
+  const byName = (a: MedicationViewModel, b: MedicationViewModel) =>
+    (a.ppa_name ?? '').localeCompare(b.ppa_name ?? '')
+  const active = medications.filter((m) => m.ppa_isactive).sort(byName)
+  const inactive = medications.filter((m) => !m.ppa_isactive).sort(byName)
 
   if (!isLoading && medications.length === 0) {
     return (

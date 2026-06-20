@@ -1,16 +1,25 @@
+import { Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useMedications } from '@/hooks/use-medications'
 import { useIntakeLogs } from '@/hooks/use-intake-logs'
-import { scheduledDosesOnDay, takenLogsOnDay } from '@/lib/adherence'
-import { startOfLocalDay, endOfLocalDay } from '@/lib/date-utils'
+import { scheduledDosesOnDay } from '@/lib/adherence'
+import { startOfLocalDay, endOfLocalDay, isSameLocalDay } from '@/lib/date-utils'
 import type { Ppa_medications } from '@/generated/models/Ppa_medicationsModel'
+import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
 
 interface ScheduleListProps {
   onLog: (medication: Ppa_medications) => void
+  onEdit?: (log: Ppa_intakelogs) => void
 }
 
-export default function ScheduleList({ onLog }: ScheduleListProps) {
+const STATUS_CONFIG = {
+  894250000: { label: 'Taken',   className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  894250001: { label: 'Skipped', className: 'bg-gray-100  text-gray-700  dark:bg-gray-800       dark:text-gray-400' },
+  894250002: { label: 'Missed',  className: 'bg-red-100   text-red-800   dark:bg-red-900/30     dark:text-red-400' },
+} as const
+
+export default function ScheduleList({ onLog, onEdit }: ScheduleListProps) {
   const today = new Date()
   const { data: medications = [] } = useMedications()
   const { data: logs = [] } = useIntakeLogs({
@@ -19,10 +28,18 @@ export default function ScheduleList({ onLog }: ScheduleListProps) {
   })
 
   const scheduled = scheduledDosesOnDay(medications, today)
-  const taken = takenLogsOnDay(logs, today)
-  const takenMedIds = new Set(
-    taken.map((l) => l._ppa_medication_value).filter(Boolean)
-  )
+
+  // Build a map: medicationId → best log for today.
+  // Prefer Taken over Skipped/Missed so a corrected log wins.
+  const logByMedId = new Map<string, Ppa_intakelogs>()
+  for (const log of logs) {
+    const mid = log._ppa_medication_value
+    if (!mid || !isSameLocalDay(new Date(log.ppa_loggedat), today)) continue
+    const existing = logByMedId.get(mid)
+    if (!existing || log.ppa_status === 894250000) {
+      logByMedId.set(mid, log)
+    }
+  }
 
   if (scheduled.length === 0) {
     return (
@@ -35,7 +52,9 @@ export default function ScheduleList({ onLog }: ScheduleListProps) {
   return (
     <ul className="flex flex-col gap-3">
       {scheduled.map((med) => {
-        const isTaken = takenMedIds.has(med.ppa_medicationid)
+        const log = logByMedId.get(med.ppa_medicationid)
+        const statusCfg = log ? STATUS_CONFIG[log.ppa_status as keyof typeof STATUS_CONFIG] : undefined
+
         return (
           <li
             key={med.ppa_medicationid}
@@ -48,9 +67,21 @@ export default function ScheduleList({ onLog }: ScheduleListProps) {
                 {med.ppa_remindertime && ` · ${med.ppa_remindertime}`}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              {isTaken ? (
-                <Badge variant="secondary">Taken</Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              {log && statusCfg ? (
+                <>
+                  <Badge className={statusCfg.className}>{statusCfg.label}</Badge>
+                  {onEdit && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onEdit(log)}
+                      aria-label={`Edit ${med.ppa_name} log`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </>
               ) : (
                 <Button size="sm" variant="outline" onClick={() => onLog(med)}>
                   Log

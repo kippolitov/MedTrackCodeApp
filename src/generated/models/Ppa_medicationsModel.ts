@@ -52,6 +52,8 @@ export interface Ppa_medicationsBase {
   ppa_name: string;
   ppa_remindertime?: string;
   ppa_scheduledday?: Ppa_medicationsppa_scheduledday;
+  ppa_sortorder?: number;
+  ppa_startdate?: string;
   statecode: Ppa_medicationsstatecode;
   statuscode?: Ppa_medicationsstatuscode;
   timezoneruleversionnumber?: number;
