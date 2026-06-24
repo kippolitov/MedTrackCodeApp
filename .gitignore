@@ -25,3 +25,7 @@ dist-ssr
 
 # Claude Code
 .claude/settings.local.json
+
+# Visual QA artifacts (Playwright snapshots/console logs + screenshots)
+.playwright-mcp/
+/[0-9][0-9]-*.png
