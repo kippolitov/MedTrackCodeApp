@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import type { Ppa_medications } from '@/generated/models/Ppa_medicationsModel'
 import type {
   Ppa_medicationsppa_frequency,
   Ppa_medicationsppa_method,
@@ -29,7 +28,7 @@ import { Ppa_medicationsppa_scheduledday as ScheduledDayEnum } from '@/generated
 import { toast } from 'sonner'
 import { useCreateMedication, useUpdateMedication, useMedications } from '@/hooks/use-medications'
 
-export type MedicationViewModel = Ppa_medications
+import type { MedicationViewModel } from '@/lib/adherence'
 
 type MedicationFormMode = 'add' | 'edit'
 
@@ -202,12 +201,20 @@ export default function MedicationForm({
     try {
       if (mode === 'add') {
         const result = await createMed.mutateAsync(payload as Parameters<typeof createMed.mutateAsync>[0])
+        if (!result.success || !result.data) {
+          toast.error('Failed to save medication. Please try again.')
+          return
+        }
         onSaved(result.data)
       } else if (mode === 'edit' && initialValues) {
         const result = await updateMed.mutateAsync({
           id: initialValues.ppa_medicationid,
           fields: payload,
         })
+        if (!result.success || !result.data) {
+          toast.error('Failed to save medication. Please try again.')
+          return
+        }
         onSaved(result.data)
       }
       onOpenChange(false)

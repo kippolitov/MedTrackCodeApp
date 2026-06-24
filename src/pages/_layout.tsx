@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from "react-router-dom"
 import { Home, Pill, CalendarDays, BarChart2 } from "lucide-react"
+import { ModeToggle } from "@/components/mode-toggle"
 
 type LayoutProps = { showHeader?: boolean }
 
@@ -38,6 +39,9 @@ export default function Layout({ showHeader = true }: LayoutProps) {
             </NavLink>
           ))}
         </nav>
+        <div className="mt-auto p-2 flex justify-center lg:justify-start lg:px-3 pb-4">
+          <ModeToggle />
+        </div>
       </aside>
 
       {/* Main content */}
@@ -47,6 +51,12 @@ export default function Layout({ showHeader = true }: LayoutProps) {
             <span className="font-semibold text-sm">MedTrack</span>
           </header>
         )}
+
+        {/* Mobile-only top bar — gives small screens the brand and the theme toggle */}
+        <header className="md:hidden h-14 border-b flex items-center justify-between px-4">
+          <span className="font-semibold text-sm">MedTrack</span>
+          <ModeToggle />
+        </header>
 
         <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
           <Outlet />

@@ -11,14 +11,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import type { Ppa_medications } from '@/generated/models/Ppa_medicationsModel'
 import {
   Ppa_medicationsppa_frequency,
   Ppa_medicationsppa_method,
   Ppa_medicationsppa_scheduledday,
 } from '@/generated/models/Ppa_medicationsModel'
+import type { MedicationViewModel } from '@/lib/adherence'
 
-export type MedicationViewModel = Ppa_medications
+export type { MedicationViewModel }
 
 // The Power Apps Code App SDK returns Dataverse choice fields as "[Day: wednesday]" at runtime.
 // This helper extracts a proper display label from any format the SDK may return.
