@@ -29,3 +29,4 @@ dist-ssr
 # Visual QA artifacts (Playwright snapshots/console logs + screenshots)
 .playwright-mcp/
 /[0-9][0-9]-*.png
+/mock-*.png

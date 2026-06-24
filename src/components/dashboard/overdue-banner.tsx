@@ -22,10 +22,10 @@ export default function OverdueBanner({ overdueMedications, onLog }: OverdueBann
     <div
       role="region"
       aria-label="Overdue medications"
-      className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 flex flex-col gap-2"
+      className="bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/50 rounded-lg px-4 py-3 flex flex-col gap-2"
     >
       {overdueMedications.length > 1 && (
-        <p className="text-sm font-semibold text-amber-900">
+        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
           {overdueMedications.length} doses overdue
         </p>
       )}
@@ -34,7 +34,7 @@ export default function OverdueBanner({ overdueMedications, onLog }: OverdueBann
           key={medication.ppa_medicationid}
           className="flex items-center justify-between gap-3"
         >
-          <span className="text-sm font-medium text-amber-900">
+          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
             {medication.ppa_name} {medication.ppa_dosage} — overdue by {formatOverdue(overdueBy)}
           </span>
           <Button size="sm" variant="outline" onClick={() => onLog(medication)}>
