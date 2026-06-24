@@ -1,7 +1,5 @@
 import { create } from 'zustand'
-import type { Ppa_medications } from '@/generated/models/Ppa_medicationsModel'
-
-export type MedicationViewModel = Ppa_medications
+import type { MedicationViewModel } from '@/lib/adherence'
 
 interface UiStore {
   isMedicationFormOpen: boolean

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useMedications } from './use-medications'
 import { useIntakeLogs } from './use-intake-logs'
 import { startOfLocalDay, endOfLocalDay, isSameLocalDay } from '@/lib/date-utils'
+import { scheduledDosesOnDay } from '@/lib/adherence'
 import type { OverdueMedication } from '@/lib/adherence'
 
 export function useOverdue(): OverdueMedication[] {
@@ -24,10 +25,17 @@ export function useOverdue(): OverdueMedication[] {
         .filter(Boolean)
     )
 
+    // Only meds actually due today can be overdue (a weekly/biweekly med isn't
+    // overdue on a day it isn't scheduled). scheduledDosesOnDay already filters
+    // out inactive meds.
+    const scheduledToday = new Set(
+      scheduledDosesOnDay(medications, now).map((m) => m.ppa_medicationid)
+    )
+
     const overdue: OverdueMedication[] = []
 
     for (const med of medications) {
-      if (!med.ppa_isactive) continue
+      if (!scheduledToday.has(med.ppa_medicationid)) continue
       if (!med.ppa_remindertime) continue
       if (takenMedIds.has(med.ppa_medicationid)) continue
 

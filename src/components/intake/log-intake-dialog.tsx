@@ -29,11 +29,6 @@ import type { Ppa_intakelogsppa_status } from '@/generated/models/Ppa_intakelogs
 import type { LogIntakePrePopulation } from '@/stores/log-intake-store'
 import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
 
-export interface IntakeLogViewModel extends Ppa_intakelogs {
-  loggedAtDate: Date
-  scheduledForDate: Date
-}
-
 interface LogIntakeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void

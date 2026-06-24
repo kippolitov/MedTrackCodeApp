@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { toast } from 'sonner'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/style.css'
 import { Button } from '@/components/ui/button'
@@ -90,7 +91,13 @@ export default function CalendarPage() {
   }
 
   async function handleDelete(logId: string) {
-    await deleteMutation.mutateAsync(logId)
+    try {
+      await deleteMutation.mutateAsync(logId)
+      toast.success('Intake log deleted')
+    } catch (err) {
+      console.error('Delete intake log error:', err)
+      toast.error('Failed to delete intake log. Please try again.')
+    }
   }
 
   return (

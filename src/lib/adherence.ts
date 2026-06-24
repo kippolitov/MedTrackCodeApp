@@ -16,11 +16,6 @@ export interface OverdueMedication {
   overdueBy: number
 }
 
-export interface IntakeLogViewModel extends Ppa_intakelogs {
-  loggedAtDate: Date
-  scheduledForDate: Date
-}
-
 export interface AdherenceDataPoint {
   periodLabel: string
   periodStart: Date
@@ -59,9 +54,12 @@ export function scheduledDosesOnDay(
         return dateToDayEnum(date) === Number(med.ppa_scheduledday)
       }
       case 894250002: { // Biweekly
-        if (!med.ppa_startdate) return true // no anchor set — show every occurrence
-        const start = new Date(med.ppa_startdate)
-        if (date < startOfLocalDay(start)) return false
+        // Anchor week-0 on the explicit start date, falling back to the record
+        // creation date (matches the form's "leave blank to use creation date").
+        const anchor = med.ppa_startdate ?? med.createdon
+        if (!anchor) return false // no anchor available — not schedulable
+        const start = startOfLocalDay(new Date(anchor))
+        if (date < start) return false
         const weeks = weeksBetween(start, date)
         return weeks % 2 === 0
       }
