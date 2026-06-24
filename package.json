@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mock": "vite --mode mock",
     "dev:live": "pac code run",
     "build": "tsc -b && vite build && pac code push",
     "lint": "eslint .",
