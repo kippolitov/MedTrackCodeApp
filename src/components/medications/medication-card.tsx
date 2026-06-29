@@ -17,6 +17,7 @@ import {
   Ppa_medicationsppa_scheduledday,
 } from '@/generated/models/Ppa_medicationsModel'
 import type { MedicationViewModel } from '@/lib/adherence'
+import { formatTime } from '@/lib/date-utils'
 
 export type { MedicationViewModel }
 
@@ -37,16 +38,17 @@ function parseDayLabel(raw: unknown, nameAnnotation?: string): string | null {
   return (!isNaN(num) && Ppa_medicationsppa_scheduledday[num as keyof typeof Ppa_medicationsppa_scheduledday]) || null
 }
 
-// Reminder time is stored as a 24-hour "HH:mm" string; display it in 12-hour AM/PM format.
+// Reminder time is stored as a 24-hour "HH:mm" string; display it in the user's
+// locale format (12-hour AM/PM for US, 24-hour elsewhere) via the shared formatter.
 function formatReminderTime(raw: string): string {
   const m = raw.match(/^(\d{1,2}):(\d{2})/)
   if (!m) return raw
-  let hours = Number(m[1])
-  const minutes = m[2]
-  if (isNaN(hours)) return raw
-  const period = hours >= 12 ? 'PM' : 'AM'
-  hours = hours % 12 || 12
-  return `${hours}:${minutes} ${period}`
+  const hours = Number(m[1])
+  const minutes = Number(m[2])
+  if (isNaN(hours) || isNaN(minutes)) return raw
+  const d = new Date()
+  d.setHours(hours, minutes, 0, 0)
+  return formatTime(d)
 }
 
 interface MedicationCardProps {

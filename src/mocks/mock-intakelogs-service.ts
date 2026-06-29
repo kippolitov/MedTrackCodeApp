@@ -15,9 +15,28 @@ function bindToMedId(value: unknown): string | undefined {
   return value.match(/ppa_medications\(([^)]+)\)/)?.[1]
 }
 
+// Parse the `ppa_loggedat ge <iso> and ppa_loggedat le <iso>` range out of an
+// OData $filter so the mock returns month-scoped data like the real service.
+function dateRangeFromFilter(filter?: string): { from?: number; to?: number } {
+  if (!filter) return {}
+  const ge = filter.match(/ppa_loggedat ge ([^\s]+)/)?.[1]
+  const le = filter.match(/ppa_loggedat le ([^\s]+)/)?.[1]
+  return {
+    from: ge ? Date.parse(ge) : undefined,
+    to: le ? Date.parse(le) : undefined,
+  }
+}
+
 export class Ppa_intakelogsService {
-  static async getAll() {
-    return delay({ data: [...intakeLogs], success: true })
+  static async getAll(options?: { select?: string[]; filter?: string }) {
+    const { from, to } = dateRangeFromFilter(options?.filter)
+    const data = intakeLogs.filter((l) => {
+      const t = Date.parse(l.ppa_loggedat)
+      if (from !== undefined && t < from) return false
+      if (to !== undefined && t > to) return false
+      return true
+    })
+    return delay({ data, success: true })
   }
 
   static async get(id: string) {

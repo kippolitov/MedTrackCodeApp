@@ -131,6 +131,17 @@ function buildSeedLogs(): Ppa_intakelogs[] {
   add('med-adalimumab', 'Adalimumab', dayAt(14, '20:05'), Status.Taken, SITES[1])
   add('med-adalimumab', 'Adalimumab', dayAt(28, '20:05'), Status.Taken, SITES[3])
 
+  // Older logs spanning earlier months so month/year navigation has data to show.
+  for (const d of [45, 60, 75, 90]) {
+    add('med-metformin', 'Metformin', dayAt(d, '06:05'), Status.Taken)
+    add('med-insulin', 'Insulin Glargine', dayAt(d, '21:35'), Status.Taken, SITES[d % SITES.length])
+  }
+
+  // Edge-time logs for locale validation: noon and midnight (12:00 PM / 12:00 AM in US;
+  // 12:00 / 00:00 in 24-hour locales).
+  add('med-metformin', 'Metformin', dayAt(1, '12:00'), Status.Taken)
+  add('med-metformin', 'Metformin', dayAt(2, '00:00'), Status.Taken)
+
   return out
 }
 

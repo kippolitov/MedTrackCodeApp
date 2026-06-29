@@ -1,14 +1,16 @@
 import { useState, useMemo, useRef } from 'react'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfMonth, endOfMonth, isSameMonth, addMonths, subMonths } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/style.css'
 import { Button } from '@/components/ui/button'
 import IntakeLogCard from '@/components/intake/intake-log-card'
 import LogIntakeDialog from '@/components/intake/log-intake-dialog'
+import MonthYearPicker from '@/components/calendar/month-year-picker'
 import { useIntakeLogs, useDeleteIntakeLog } from '@/hooks/use-intake-logs'
 import { useMedications } from '@/hooks/use-medications'
-import { isSameLocalDay } from '@/lib/date-utils'
+import { isSameLocalDay, formatDateLabel, getCalendarBounds } from '@/lib/date-utils'
 import { useUiStore } from '@/stores/ui-store'
 import { useLogIntakeStore } from '@/stores/log-intake-store'
 import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
@@ -16,7 +18,16 @@ import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
 export default function CalendarPage() {
   const [viewedMonth, setViewedMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
+  const [overlay, setOverlay] = useState<'none' | 'month' | 'year'>('none')
   const dayPanelRef = useRef<HTMLElement>(null)
+
+  // Bounded month/year range for navigation.
+  const { startMonth, endMonth } = useMemo(() => getCalendarBounds(), [])
+
+  const canGoPrev = startOfMonth(viewedMonth) > startOfMonth(startMonth)
+  const canGoNext = startOfMonth(viewedMonth) < startOfMonth(endMonth)
+  const monthLabel = formatDateLabel(viewedMonth, { month: 'long' })
+  const yearLabel = String(viewedMonth.getFullYear())
 
   const { isLogIntakeOpen, setLogIntakeOpen } = useUiStore()
   const { prePopulation, setPrePopulation, clearPrePopulation } = useLogIntakeStore()
@@ -115,6 +126,69 @@ export default function CalendarPage() {
 
       <div className="flex flex-col md:flex-row gap-6">
         <div className="flex-1">
+          {/* Month navigation: prev/next arrows flanking separately-tappable
+              month and year labels, each opening its own picker overlay. */}
+          <div className="mb-2 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Previous month"
+              disabled={!canGoPrev}
+              onClick={() => setViewedMonth((m) => subMonths(m, 1))}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-1 text-lg font-semibold">
+              <MonthYearPicker
+                mode="month"
+                open={overlay === 'month'}
+                onOpenChange={(o) => setOverlay(o ? 'month' : 'none')}
+                value={viewedMonth}
+                onChange={setViewedMonth}
+                minYear={startMonth.getFullYear()}
+                maxYear={endMonth.getFullYear()}
+                trigger={
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-label={`${monthLabel}, change month`}
+                    className="rounded-md px-2 py-1 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {monthLabel}
+                  </button>
+                }
+              />
+              <MonthYearPicker
+                mode="year"
+                open={overlay === 'year'}
+                onOpenChange={(o) => setOverlay(o ? 'year' : 'none')}
+                value={viewedMonth}
+                onChange={setViewedMonth}
+                minYear={startMonth.getFullYear()}
+                maxYear={endMonth.getFullYear()}
+                trigger={
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-label={`${yearLabel}, change year`}
+                    className="rounded-md px-2 py-1 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {yearLabel}
+                  </button>
+                }
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Next month"
+              disabled={!canGoNext}
+              onClick={() => setViewedMonth((m) => addMonths(m, 1))}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+
           {isPending ? (
             <div
               aria-label="Loading calendar"
@@ -128,10 +202,15 @@ export default function CalendarPage() {
                 month={viewedMonth}
                 onMonthChange={setViewedMonth}
                 selected={selectedDate ?? undefined}
+                hideNavigation
+                startMonth={startMonth}
+                endMonth={endMonth}
                 classNames={{
                   root: 'w-full',
                   months: 'w-full',
                   month: 'w-full',
+                  // Built-in caption/nav is hidden; navigation is our custom header above.
+                  month_caption: 'hidden',
                   month_grid: 'w-full border-collapse',
                   weekdays: 'border-b border-border/40',
                   weekday: 'py-3 text-xs font-medium text-center text-muted-foreground',
@@ -220,7 +299,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {selectedDate && (
+        {selectedDate && isSameMonth(selectedDate, viewedMonth) && (
           <aside
             ref={dayPanelRef}
             role="region"
@@ -228,7 +307,9 @@ export default function CalendarPage() {
             className="w-full md:w-72 border rounded-lg p-4 flex flex-col gap-3"
           >
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">{format(selectedDate, 'MMMM d, yyyy')}</h2>
+              <h2 className="font-semibold">
+                {formatDateLabel(selectedDate, { year: 'numeric', month: 'long', day: 'numeric' })}
+              </h2>
               <Button size="sm" onClick={handleLogFromPanel}>
                 Log Intake
               </Button>

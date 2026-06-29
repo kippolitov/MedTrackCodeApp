@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { getSiteLabel } from '@/lib/injection-sites'
+import { formatTime } from '@/lib/date-utils'
 import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
 
 const STATUS_LABELS: Record<number, string> = {
@@ -35,7 +36,7 @@ export default function IntakeLogCard({ log, onEdit, onDelete }: IntakeLogCardPr
   const [isDeleting, setIsDeleting] = useState(false)
 
   const loggedAt = new Date(log.ppa_loggedat)
-  const timeLabel = `${String(loggedAt.getHours()).padStart(2, '0')}:${String(loggedAt.getMinutes()).padStart(2, '0')}`
+  const timeLabel = formatTime(loggedAt)
 
   return (
     <>
