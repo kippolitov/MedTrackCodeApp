@@ -69,9 +69,11 @@ by date-fns arithmetic), and FR-008 (bounded year list).
 - *Custom shadcn `Select` dropdowns* — viable but still a dropdown UX; the bullet overlay was preferred.
 - *Prev/next year arrows only* — rejected: fails "jump directly to any year" (FR-003) and SC-001.
 
-**Accessibility note**: Each overlay uses a `role="listbox"` of `role="option"` pills with `aria-selected`;
-the header label buttons use `aria-haspopup="listbox"`. The Popover is non-modal, so the rest of the page
-stays accessible while it is open (tests query the pills by `listbox`/`option`, not a dialog role).
+**Accessibility note**: Each overlay is a `role="group"` (labeled "Month"/"Year") of toggle `<button>`
+pills using `aria-pressed` for the selected state — buttons are natively Tab-focusable and Enter/Space
+operable. (An earlier `role="listbox"`/`role="option"` version was dropped because it implied roving
+arrow-key focus that wasn't implemented.) The Popover is non-modal, so the rest of the page stays
+accessible while it is open (tests query pills by `group`/`button`, not a dialog role).
 
 ---
 

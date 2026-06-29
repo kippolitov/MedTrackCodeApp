@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -36,8 +36,7 @@ function Pill({
   return (
     <button
       type="button"
-      role="option"
-      aria-selected={selected}
+      aria-pressed={selected}
       onClick={onSelect}
       className={cn(
         'flex h-10 items-center justify-center rounded-full px-3 text-sm font-medium transition-colors',
@@ -67,7 +66,9 @@ export default function MonthYearPicker({
 
   // First year of the currently shown year page (aligned to minYear).
   const [pageStart, setPageStart] = useState(minYear)
-  useEffect(() => {
+  // Layout effect (not effect) so the correct year page is set before paint,
+  // avoiding a one-frame flash of the wrong 12-year block on reopen.
+  useLayoutEffect(() => {
     if (open && mode === 'year') {
       const offset = Math.max(0, Math.floor((selectedYear - minYear) / YEARS_PER_PAGE)) * YEARS_PER_PAGE
       setPageStart(minYear + offset)
@@ -118,7 +119,7 @@ export default function MonthYearPicker({
           </div>
         )}
 
-        <div role="listbox" aria-label={mode === 'month' ? 'Month' : 'Year'} className="grid grid-cols-3 gap-2">
+        <div role="group" aria-label={mode === 'month' ? 'Month' : 'Year'} className="grid grid-cols-3 gap-2">
           {mode === 'month'
             ? MONTH_INDEXES.map((m) => (
                 <Pill

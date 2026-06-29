@@ -154,8 +154,8 @@ describe('CalendarPage', () => {
     render(<CalendarPage />, { wrapper })
     await screen.findByRole('grid')
     await user.click(screen.getByRole('button', { name: /change year/i }))
-    const listbox = await screen.findByRole('listbox', { name: /year/i })
-    const years = within(listbox).getAllByRole('option').map((o) => Number(o.textContent))
+    const group = await screen.findByRole('group', { name: /year/i })
+    const years = within(group).getAllByRole('button').map((o) => Number(o.textContent))
     const cy = new Date().getFullYear()
     expect(years.length).toBeLessThanOrEqual(12)
     expect(years).toContain(cy) // the page containing today's year is shown first
@@ -171,9 +171,9 @@ describe('CalendarPage', () => {
     await screen.findByRole('grid')
     const cy = new Date().getFullYear()
     await user.click(screen.getByRole('button', { name: /change year/i }))
-    await screen.findByRole('listbox', { name: /year/i })
+    await screen.findByRole('group', { name: /year/i })
     await user.click(screen.getByRole('button', { name: /previous years/i }))
-    expect(screen.getByRole('option', { name: String(cy - 20) })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: String(cy - 20) })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /previous years/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /next years/i })).toBeEnabled()
   })
@@ -186,10 +186,10 @@ describe('CalendarPage', () => {
     const callsBefore = vi.mocked(Ppa_intakelogsService.getAll).mock.calls.length
     const target = new Date().getFullYear() - 2
     await user.click(screen.getByRole('button', { name: /change year/i }))
-    await screen.findByRole('listbox', { name: /year/i })
-    await user.click(screen.getByRole('option', { name: String(target) }))
+    await screen.findByRole('group', { name: /year/i })
+    await user.click(screen.getByRole('button', { name: String(target) }))
     // Auto-close: popover gone, header reflects the chosen year.
-    expect(screen.queryByRole('listbox', { name: /year/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /year/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: new RegExp(`${target}, change year`, 'i') })).toBeInTheDocument()
     expect(vi.mocked(Ppa_intakelogsService.getAll).mock.calls.length).toBeGreaterThan(callsBefore)
   })
@@ -201,9 +201,9 @@ describe('CalendarPage', () => {
     const current = new Date().getMonth()
     const targetIdx = current === 0 ? 1 : 0
     await user.click(screen.getByRole('button', { name: /change month/i }))
-    await screen.findByRole('listbox', { name: /month/i })
-    await user.click(screen.getByRole('option', { name: monthShort(targetIdx) }))
-    expect(screen.queryByRole('listbox', { name: /month/i })).not.toBeInTheDocument()
+    await screen.findByRole('group', { name: /month/i })
+    await user.click(screen.getByRole('button', { name: monthShort(targetIdx) }))
+    expect(screen.queryByRole('group', { name: /month/i })).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: new RegExp(`${monthName(targetIdx)}, change month`, 'i') }),
     ).toBeInTheDocument()
@@ -218,8 +218,8 @@ describe('CalendarPage', () => {
     const cy = new Date().getFullYear()
     // Jump 3 years back via the year overlay (auto-closes), then Today.
     await user.click(screen.getByRole('button', { name: /change year/i }))
-    await screen.findByRole('listbox', { name: /year/i })
-    await user.click(screen.getByRole('option', { name: String(cy - 3) }))
+    await screen.findByRole('group', { name: /year/i })
+    await user.click(screen.getByRole('button', { name: String(cy - 3) }))
     await user.click(screen.getByRole('button', { name: /today/i }))
     expect(
       screen.getByRole('button', { name: new RegExp(`${monthName(new Date().getMonth())}, change month`, 'i') }),
@@ -234,11 +234,11 @@ describe('CalendarPage', () => {
     const cy = new Date().getFullYear()
     // Set year (cy-1) then month December via the two overlays, then step forward.
     await user.click(screen.getByRole('button', { name: /change year/i }))
-    await screen.findByRole('listbox', { name: /year/i })
-    await user.click(screen.getByRole('option', { name: String(cy - 1) }))
+    await screen.findByRole('group', { name: /year/i })
+    await user.click(screen.getByRole('button', { name: String(cy - 1) }))
     await user.click(screen.getByRole('button', { name: /change month/i }))
-    await screen.findByRole('listbox', { name: /month/i })
-    await user.click(screen.getByRole('option', { name: monthShort(11) }))
+    await screen.findByRole('group', { name: /month/i })
+    await user.click(screen.getByRole('button', { name: monthShort(11) }))
     await user.click(screen.getByRole('button', { name: /next month/i }))
     expect(
       screen.getByRole('button', { name: new RegExp(`${monthName(0)}, change month`, 'i') }),
@@ -252,11 +252,11 @@ describe('CalendarPage', () => {
     await screen.findByRole('grid')
     const cy = new Date().getFullYear()
     await user.click(screen.getByRole('button', { name: /change year/i }))
-    await screen.findByRole('listbox', { name: /year/i })
-    await user.click(screen.getByRole('option', { name: String(cy) }))
+    await screen.findByRole('group', { name: /year/i })
+    await user.click(screen.getByRole('button', { name: String(cy) }))
     await user.click(screen.getByRole('button', { name: /change month/i }))
-    await screen.findByRole('listbox', { name: /month/i })
-    await user.click(screen.getByRole('option', { name: monthShort(0) }))
+    await screen.findByRole('group', { name: /month/i })
+    await user.click(screen.getByRole('button', { name: monthShort(0) }))
     await user.click(screen.getByRole('button', { name: /previous month/i }))
     expect(
       screen.getByRole('button', { name: new RegExp(`${monthName(11)}, change month`, 'i') }),

@@ -22,7 +22,7 @@ behaviors/affordances so it is testable via Testing Library (constitution II).
 7. **Today** — single control that sets `viewedMonth` to the current month and `selectedDate` to today.
 
 All controls MUST be keyboard-operable with visible focus and ≥44×44 px touch targets (FR-012, Principle III).
-Overlay pills use `role="option"` within a `role="listbox"` labeled "Month" or "Year".
+Overlay pills are toggle `<button>`s (`aria-pressed` for selection) inside a `role="group"` labeled "Month" or "Year".
 
 ## Behavioral contract
 

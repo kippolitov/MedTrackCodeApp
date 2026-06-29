@@ -65,9 +65,9 @@ export function formatDateLabel(
 }
 
 /**
- * Bounded month range offered for direct navigation: currentYear-5 .. currentYear+1
- * (research R3). Used for react-day-picker's startMonth/endMonth so the year
- * dropdown stays short and usable (FR-008).
+ * Bounded month range offered for navigation: January of (currentYear - YEARS_BACK)
+ * through December of (currentYear + YEARS_FORWARD) — i.e. currentYear-20 .. currentYear+3
+ * (research R3). Bounds both the header prev/next arrows and the paged year picker (FR-008).
  */
 export function getCalendarBounds(reference: Date = new Date()): { startMonth: Date; endMonth: Date } {
   const year = reference.getFullYear()
