@@ -46,16 +46,10 @@ jobs:
       - name: Build
         run: npm run build:ci
 
-      - name: Authenticate to Power Platform
-        shell: pwsh
-        env:
-          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
-          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
-          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
-          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
-        run: ./scripts/deploy/auth.ps1
-
-      # --- Schema (US3, FR-007): must complete before the app push ---
+      # --- Schema (US3, FR-007): must complete before the app push.
+      # These official actions authenticate internally via their own
+      # app-id/client-secret/tenant-id inputs; they don't need (or preserve)
+      # a persisted `pac auth` profile.
       - name: Pack solution
         uses: microsoft/powerplatform-actions/pack-solution@v1
         with:
@@ -80,7 +74,19 @@ jobs:
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
 
-      # --- App (US2, FR-005) ---
+      # --- App (US2, FR-005): pac code push and pac data import (below) use
+      # the pac CLI directly, so authenticate immediately before them here
+      # rather than earlier — a profile created before the actions above ran
+      # is not reliably present afterward.
+      - name: Authenticate to Power Platform
+        shell: pwsh
+        env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
+          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
+        run: ./scripts/deploy/auth.ps1
+
       - name: Render power.config.json
         shell: pwsh
         env:
