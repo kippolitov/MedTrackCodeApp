@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{ae7c7b35-0291-4ffe-9171-dfbc1db6e533}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="ppa_name" select="1" icon="1" preview="1">
+        <row name="result" id="ppa_medicationid">
+          <cell name="ppa_name" width="300" />
+          <cell name="ppa_dosage" width="150" />
+          <cell name="ppa_frequency" width="150" />
+          <cell name="ppa_method" width="150" />
+          <cell name="ppa_instructions" width="150" />
+          <cell name="ppa_remindertime" width="150" />
+          <cell name="ppa_isactive" width="150" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>0</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="ppa_medication">
+          <attribute name="ppa_medicationid" />
+          <attribute name="ppa_name" />
+          <attribute name="createdon" />
+          <order attribute="ppa_name" descending="false" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="0" />
+          </filter>
+          <attribute name="ppa_dosage" />
+          <attribute name="ppa_frequency" />
+          <attribute name="ppa_method" />
+          <attribute name="ppa_instructions" />
+          <attribute name="ppa_remindertime" />
+          <attribute name="ppa_isactive" />
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Active Medications" languagecode="1033" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>
