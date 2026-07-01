@@ -61,7 +61,7 @@ Runnable checks that prove the feature works end to end. See [contracts/](./cont
 
 ### V10 — Data migration never logs record contents (US3, FR-016)
 - Run `deploy-dev.yml` with `migrate_data=true` against a dev environment containing sample medications/intake logs.
-- **Expect**: the run's logs show only aggregate success/failure and record counts for the `pac data import` step — no medication names, timestamps, or other field values appear in the workflow output.
+- **Expect**: the run's logs show only aggregate success/failure and record counts for the `Migrate operational data (opt-in)` step (`scripts/deploy/migrate-data.ps1`) — no medication names, timestamps, or other field values appear in the workflow output.
 
 ## Rollback drill (FR-015)
 - Re-run the deploy workflow via `workflow_dispatch` pinned to the last-known-good commit/tag.

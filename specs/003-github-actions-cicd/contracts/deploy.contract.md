@@ -23,7 +23,7 @@ Deploys the Code App + Dataverse schema (+ opt-in data) to a target Power Platfo
 | Render config | `scripts/ci/render-power-config.*` → `power.config.json` from template + `PP_ENVIRONMENT_ID`/`PP_APP_ID` (FR-020). |
 | **Schema** | `pac solution pack` (`solution/src`) → `import-solution` (SP auth) → `publish-solution`. Runs **before** app push (FR-007). |
 | **App** | `pac code push` (`scripts/deploy/deploy-app.*`, `--log-to-console`) (FR-005). |
-| **Data (conditional)** | `if: inputs.migrate_data` → `pac data import` with `data/data-schema.xml` (idempotent upsert by alternate key). Skipped entirely when false (FR-016). |
+| **Data (conditional)** | `if: inputs.migrate_data` → `scripts/deploy/migrate-data.ps1`, a Web API upsert against `data/ppa_medication.json`/`data/ppa_intakelog.json` keyed by alternate key (idempotent upsert). Skipped entirely when false (FR-016). `pac data import`/`export` do not exist in the PAC CLI; the only related tool, `pac tool CMT`, is a Windows GUI executable and cannot run on a GitHub-hosted Linux runner — found live 2026-07-01 during T039. |
 | Record | Emit deployment summary (commit, environment, actor, outcome, data flag) (FR-009). |
 
 ### Ordering & failure guarantees
