@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import fs from 'fs'
 import path from 'path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -6,6 +7,12 @@ import { powerApps } from '@microsoft/power-apps-vite';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
+  // Dev-only HTTPS certs are gitignored (regenerate locally, e.g. via mkcert);
+  // the dev server falls back to HTTP when they're absent.
+  const keyPath = path.resolve(__dirname, './localhost-key.pem')
+  const certPath = path.resolve(__dirname, './localhost.pem')
+  const hasLocalCerts = fs.existsSync(keyPath) && fs.existsSync(certPath)
+
   // Mock dev mode (`vite --mode mock` / `npm run dev:mock`): swap the generated
   // Dataverse services and the Power Apps host module for in-memory mocks so the
   // app runs end-to-end with seed data and no Power runtime. Not applied in
@@ -36,10 +43,12 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       port: 3000,
-      https: {
-        key: './localhost-key.pem',
-        cert: './localhost.pem',
-      },
+      https: hasLocalCerts
+        ? {
+            key: keyPath,
+            cert: certPath,
+          }
+        : undefined,
     },
     resolve: {
       // Array form so the specific mock entries are matched before the general "@".

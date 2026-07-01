@@ -1,0 +1,117 @@
+name: Deploy (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Target GitHub Environment (dev | production)
+        required: true
+        type: string
+      migrate_data:
+        description: Opt-in operational data migration (off by default — FR-016)
+        required: false
+        type: boolean
+        default: false
+
+# Serialize deploys to a given environment so concurrent runs cannot overwrite
+# one another mid-deployment (FR-011). Never cancel an in-flight deploy.
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install pac CLI
+        uses: microsoft/powerplatform-actions/actions/install@v1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build:ci
+
+      - name: Authenticate to Power Platform
+        shell: pwsh
+        env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
+          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
+        run: ./scripts/deploy/auth.ps1
+
+      # --- Schema (US3, FR-007): must complete before the app push ---
+      - name: Pack solution
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: solution/src
+          solution-file: out/MedTrackCore.zip
+          solution-type: Unmanaged
+
+      - name: Import solution
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ vars.PP_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          path: out/MedTrackCore.zip
+
+      - name: Publish solution customizations
+        uses: microsoft/powerplatform-actions/publish-solution@v1
+        with:
+          environment-url: ${{ vars.PP_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+
+      # --- App (US2, FR-005) ---
+      - name: Render power.config.json
+        shell: pwsh
+        env:
+          PP_ENVIRONMENT_ID: ${{ vars.PP_ENVIRONMENT_ID }}
+          PP_APP_ID: ${{ vars.PP_APP_ID }}
+        run: ./scripts/ci/render-power-config.ps1
+
+      - name: Deploy Code App
+        shell: pwsh
+        run: ./scripts/deploy/deploy-app.ps1
+
+      # --- Data (US3, FR-016): off by default, opt-in only, no record-content logging ---
+      - name: Migrate operational data (opt-in)
+        if: ${{ inputs.migrate_data }}
+        shell: pwsh
+        env:
+          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
+        run: |
+          # --logConsole intentionally omitted / quiet: pac data import reports only
+          # aggregate success/failure and record counts, never field values (FR-016).
+          pac data import --dataFolder data --environment $env:PP_ENVIRONMENT_URL
+
+      # --- Deployment record (FR-009) ---
+      - name: Record deployment
+        if: always()
+        run: |
+          {
+            echo "### Deployment summary"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Environment: \`${{ inputs.environment }}\`"
+            echo "- Actor: \`${{ github.actor }}\`"
+            echo "- Triggered by: \`${{ github.event_name }}\`"
+            echo "- Data migration requested: \`${{ inputs.migrate_data }}\`"
+            echo "- Outcome: \`${{ job.status }}\`"
+            echo "- Timestamp: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+          } >> "$GITHUB_STEP_SUMMARY"

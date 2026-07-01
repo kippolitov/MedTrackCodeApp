@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Configuration Migration schema for MedTrack's opt-in operational data migration
+  (FR-016). Consumed by `pac data export` / `pac data import`.
+
+  PREREQUISITE (blocked pending pac CLI + Dataverse admin access — see
+  specs/003-github-actions-cicd/tasks.md T032/T033): each entity below MUST have
+  the alternate key declared here created in Dataverse BEFORE migrate_data=true
+  is ever used. Without it, pac data import cannot upsert by key and would
+  create duplicate records on every re-run, violating FR-016/FR-008.
+
+  Proposed alternate keys (create these in Dataverse first):
+    - ppa_medication: key on ppa_name (medication name is the natural
+      per-owner identifier used throughout the app).
+    - ppa_intakelog: composite key on ppa_medication + ppa_scheduledfor
+      (a given medication's scheduled dose event is unique in time).
+-->
+<entities>
+  <entity name="ppa_medication" displayname="Medications">
+    <fields>
+      <field name="ppa_medicationid" displayname="Medication" type="uniqueidentifier" primarykey="true" />
+      <field name="ppa_name" displayname="Name" type="string" />
+      <field name="ppa_dosage" displayname="Dosage" type="string" />
+      <field name="ppa_frequency" displayname="Frequency" type="picklist" />
+      <field name="ppa_scheduledday" displayname="Scheduled day" type="picklist" />
+      <field name="ppa_remindertime" displayname="Reminder Time" type="string" />
+      <field name="ppa_method" displayname="Method" type="picklist" />
+      <field name="ppa_instructions" displayname="Instructions" type="string" />
+      <field name="ppa_isactive" displayname="Is Active" type="boolean" />
+      <field name="statecode" displayname="Status" type="state" />
+      <field name="statuscode" displayname="Status Reason" type="status" />
+    </fields>
+    <!-- alternatekey name="ppa_medication_natural_key" fields="ppa_name" -->
+  </entity>
+
+  <entity name="ppa_intakelog" displayname="Intake Logs">
+    <fields>
+      <field name="ppa_intakelogid" displayname="Intake Log" type="uniqueidentifier" primarykey="true" />
+      <field name="ppa_logname" displayname="Log Name" type="string" />
+      <field name="ppa_medication" displayname="Medication" type="lookup" lookuptype="ppa_medication" />
+      <field name="ppa_scheduledfor" displayname="Scheduled For" type="datetime" />
+      <field name="ppa_loggedat" displayname="Logged At" type="datetime" />
+      <field name="ppa_status" displayname="Status" type="picklist" />
+      <field name="ppa_injectionsite" displayname="Injection Site" type="picklist" />
+      <field name="ppa_notes" displayname="Notes" type="string" />
+      <field name="ppa_photourl" displayname="Photo URL" type="string" />
+      <field name="statecode" displayname="Status" type="state" />
+      <field name="statuscode" displayname="Status Reason" type="status" />
+    </fields>
+    <!-- alternatekey name="ppa_intakelog_natural_key" fields="ppa_medication,ppa_scheduledfor" -->
+  </entity>
+</entities>

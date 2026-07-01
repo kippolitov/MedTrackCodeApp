@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "appId": "__APP_ID__",
+  "appDisplayName": "Med Track Code App",
+  "region": "prod",
+  "environmentId": "__ENVIRONMENT_ID__",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "https://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "intakelogs": {
+          "entitySetName": "ppa_intakelogs",
+          "logicalName": "ppa_intakelog"
+        },
+        "medications": {
+          "entitySetName": "ppa_medications",
+          "logicalName": "ppa_medication"
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}

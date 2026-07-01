@@ -1,0 +1,15 @@
+title = "MedTrack gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secret values"
+regexes = [
+  # Placeholder tokens used by power.config.template.json, not real secrets.
+  '''__ENVIRONMENT_ID__''',
+  '''__APP_ID__''',
+]
+paths = [
+  '''(.*?)(pnpm|npm|package)-lock\.json''',
+]
