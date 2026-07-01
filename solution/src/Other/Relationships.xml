@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<EntityRelationships xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <EntityRelationship Name="business_unit_ppa_intakelog" />
+  <EntityRelationship Name="business_unit_ppa_medication" />
+  <EntityRelationship Name="lk_ppa_intakelog_createdby" />
+  <EntityRelationship Name="lk_ppa_intakelog_modifiedby" />
+  <EntityRelationship Name="lk_ppa_medication_createdby" />
+  <EntityRelationship Name="lk_ppa_medication_modifiedby" />
+  <EntityRelationship Name="owner_ppa_intakelog" />
+  <EntityRelationship Name="owner_ppa_medication" />
+  <EntityRelationship Name="ppa_IntakeLog_ppa_Medication_ppa_Medication" />
+  <EntityRelationship Name="team_ppa_intakelog" />
+  <EntityRelationship Name="team_ppa_medication" />
+  <EntityRelationship Name="user_ppa_intakelog" />
+  <EntityRelationship Name="user_ppa_medication" />
+</EntityRelationships>

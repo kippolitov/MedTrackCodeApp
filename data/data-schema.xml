@@ -3,17 +3,12 @@
   Configuration Migration schema for MedTrack's opt-in operational data migration
   (FR-016). Consumed by `pac data export` / `pac data import`.
 
-  PREREQUISITE (blocked pending pac CLI + Dataverse admin access — see
-  specs/003-github-actions-cicd/tasks.md T032/T033): each entity below MUST have
-  the alternate key declared here created in Dataverse BEFORE migrate_data=true
-  is ever used. Without it, pac data import cannot upsert by key and would
-  create duplicate records on every re-run, violating FR-016/FR-008.
-
-  Proposed alternate keys (create these in Dataverse first):
-    - ppa_medication: key on ppa_name (medication name is the natural
-      per-owner identifier used throughout the app).
-    - ppa_intakelog: composite key on ppa_medication + ppa_scheduledfor
-      (a given medication's scheduled dose event is unique in time).
+  Both alternate keys below are created and Active in MedTrackDev (verified
+  2026-07-01 via the Dataverse Web API — EntityKeyIndexStatus: Active) and
+  reflected in solution/src/, so pac data import can upsert by key rather than
+  duplicate records on re-run (FR-016/FR-008). Production (MedTrack) receives
+  the same keys automatically when solution/src/ is imported there by
+  promote-prod.yml.
 -->
 <entities>
   <entity name="ppa_medication" displayname="Medications">
@@ -30,7 +25,7 @@
       <field name="statecode" displayname="Status" type="state" />
       <field name="statuscode" displayname="Status Reason" type="status" />
     </fields>
-    <!-- alternatekey name="ppa_medication_natural_key" fields="ppa_name" -->
+    <alternatekey name="ppa_medication_name_key" fields="ppa_name" />
   </entity>
 
   <entity name="ppa_intakelog" displayname="Intake Logs">
@@ -47,6 +42,6 @@
       <field name="statecode" displayname="Status" type="state" />
       <field name="statuscode" displayname="Status Reason" type="status" />
     </fields>
-    <!-- alternatekey name="ppa_intakelog_natural_key" fields="ppa_medication,ppa_scheduledfor" -->
+    <alternatekey name="ppa_intakelog_medication_scheduledfor_key" fields="ppa_medication,ppa_scheduledfor" />
   </entity>
 </entities>
