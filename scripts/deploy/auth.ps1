@@ -22,11 +22,15 @@ if ($missing.Count -gt 0) {
 
 Write-Host "Authenticating to $($env:PP_ENVIRONMENT_URL) via service principal $($env:PP_CLIENT_ID)..."
 
+# --accept-cleartext-caching: GitHub-hosted Linux runners have no OS keyring
+# (libsecret) available, so pac auth create needs this to cache the token for
+# reuse by later steps/processes in the same (ephemeral, single-use) runner.
 pac auth create `
     --applicationId $env:PP_CLIENT_ID `
     --clientSecret $env:PP_CLIENT_SECRET `
     --tenant $env:PP_TENANT_ID `
-    --environment $env:PP_ENVIRONMENT_URL
+    --environment $env:PP_ENVIRONMENT_URL `
+    --accept-cleartext-caching
 
 if ($LASTEXITCODE -ne 0) {
     throw "pac auth create failed (exit code $LASTEXITCODE). Verify the service principal is registered as an application user in the target environment and the secret has not expired."
