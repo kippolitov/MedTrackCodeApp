@@ -3,12 +3,11 @@
 `data-schema.xml` is a Configuration Migration schema for migrating `ppa_medication` and
 `ppa_intakelog` records between Power Platform environments. It is **never run automatically**.
 
-## Before first use
+## Alternate keys
 
-The alternate keys commented in `data-schema.xml` (`ppa_medication` on `ppa_name`;
-`ppa_intakelog` on `ppa_medication` + `ppa_scheduledfor`) must be created in Dataverse first, so
-`pac data import` can upsert by key instead of creating duplicates on re-run. This is a one-time
-Dataverse schema change (see `solution/src/`), tracked separately from this migration schema.
+Both alternate keys (`ppa_medication` on `ppa_name`; `ppa_intakelog` on `ppa_medication` +
+`ppa_scheduledfor`) already exist and are Active in Dataverse (created 2026-07-01, tracked in
+`solution/src/`), so `pac data import` upserts by key instead of creating duplicates on re-run.
 
 ## Triggering a migration
 

@@ -37,3 +37,6 @@ power.config.json
 localhost*.pem
 *.pfx
 *.key
+
+# Local pac solution export/pack scratch output
+/out/

@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <systemform>
+    <formid>{19bdb9fa-f9f5-479e-afeb-526a567f2791}</formid>
+    <IntroducedVersion>1.0</IntroducedVersion>
+    <FormPresentation>1</FormPresentation>
+    <FormActivationState>1</FormActivationState>
+    <form>
+      <tabs>
+        <tab verticallayout="true" id="{0011234a-432e-4d14-adb6-a47b6f2e4da8}" IsUserDefined="1">
+          <labels>
+            <label description="General" languagecode="1033" />
+          </labels>
+          <columns>
+            <column width="100%">
+              <sections>
+                <section showlabel="false" showbar="false" IsUserDefined="0" id="{b4cfa6fc-dfdc-42ac-8216-6e5d7aa8a904}">
+                  <labels>
+                    <label description="General" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{e94e1f98-6f4d-4d00-9df7-22ab96fb87a3}">
+                        <labels>
+                          <label description="Log Name" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_logname" classid="{4273EDBD-AC1D-40d3-9FB2-095C621B552D}" datafieldname="ppa_logname" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{e69e57d6-e08f-418d-8be6-ba1171505284}">
+                        <labels>
+                          <label description="Owner" languagecode="1033" />
+                        </labels>
+                        <control id="ownerid" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="ownerid" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{6b356975-4960-4eb2-8c03-d2d7bc4ce733}">
+                        <labels>
+                          <label description="Medication" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_medication" classid="{270bd3db-d9af-4782-9025-509e298dec0a}" datafieldname="ppa_medication" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{9aa0529f-9bf2-4d03-a09b-d488eaeaa710}">
+                        <labels>
+                          <label description="Logged At" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_loggedat" classid="{5b773807-9fb2-42db-97c3-7a91eff8adff}" datafieldname="ppa_loggedat" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{ede765a3-73ec-489d-b9f5-8d1831bfa678}">
+                        <labels>
+                          <label description="Scheduled For" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_scheduledfor" classid="{5b773807-9fb2-42db-97c3-7a91eff8adff}" datafieldname="ppa_scheduledfor" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{5b0e19fd-5ca0-40ed-b5e8-2a6da87abfea}">
+                        <labels>
+                          <label description="Status" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_status" classid="{3ef39988-22bb-4f0b-bbbe-64b5a3748aee}" datafieldname="ppa_status" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{251d8f7e-be8a-4e2b-9dec-d99eb62da496}">
+                        <labels>
+                          <label description="Injection Site" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_injectionsite" classid="{3ef39988-22bb-4f0b-bbbe-64b5a3748aee}" datafieldname="ppa_injectionsite" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{21174b3b-2cc8-413a-83c1-ef72f931f696}">
+                        <labels>
+                          <label description="Notes" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_notes" classid="{4273edbd-ac1d-40d3-9fb2-095c621b552d}" datafieldname="ppa_notes" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{b0d8a96c-4b2f-47ab-a478-76ba92bca7b2}">
+                        <labels>
+                          <label description="Photo URL" languagecode="1033" />
+                        </labels>
+                        <control id="ppa_photourl" classid="{4273edbd-ac1d-40d3-9fb2-095c621b552d}" datafieldname="ppa_photourl" />
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+      </tabs>
+    </form>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>1</CanBeDeleted>
+    <LocalizedNames>
+      <LocalizedName description="Information" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="A form for this entity." languagecode="1033" />
+    </Descriptions>
+  </systemform>
+</forms>

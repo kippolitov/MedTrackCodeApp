@@ -135,11 +135,9 @@ Single-project web app (existing structure). New paths added by this feature:
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Export the current Dataverse solution (tables `ppa_medication`, `ppa_intakelog`) via `pac solution export` and unpack it into `solution/src/` via `pac solution unpack`
-- [ ] T032 [P] [US3] Add a stable alternate key to `ppa_medication` in `solution/src/` (required for idempotent data upsert)
-- [ ] T033 [P] [US3] Add a stable alternate key to `ppa_intakelog` in `solution/src/` (required for idempotent data upsert)
-
-**Blocked**: T031 requires the `pac` CLI and an authenticated Dataverse connection, neither available in this environment — hand-authoring solution XML would be misleading (Dataverse solution files are generated exports). See `solution/README.md` for the exact commands to run this with real `pac` access. T032/T033 depend on T031's real solution files existing before an alternate key can be added to them; the intended keys are documented (not yet created) in `data/data-schema.xml`.
+- [X] T031 [US3] Export the current Dataverse solution (tables `ppa_medication`, `ppa_intakelog`) via `pac solution export` and unpack it into `solution/src/` via `pac solution unpack`
+- [X] T032 [P] [US3] Add a stable alternate key to `ppa_medication` in `solution/src/` (required for idempotent data upsert)
+- [X] T033 [P] [US3] Add a stable alternate key to `ppa_intakelog` in `solution/src/` (required for idempotent data upsert)
 - [X] T034 [US3] Create `data/data-schema.xml`, a Configuration Migration schema declaring `ppa_medication`/`ppa_intakelog` and the alternate keys from T032/T033 for upsert-based migration
 - [X] T035 [US3] Insert schema pack/import/publish steps (`pac solution pack` → `import-solution` action → `publish-solution` action, using `solution/src/`) into `deploy.reusable.yml` (T025), running **before** the existing app-push step
 - [X] T036 [US3] Add a conditional data-migration step (`if: inputs.migrate_data`) to `deploy.reusable.yml` running `pac data import` with `data/data-schema.xml` (T034), fully skipped when `migrate_data` is false
@@ -147,7 +145,9 @@ Single-project web app (existing structure). New paths added by this feature:
 - [X] T038 [US3] Expose a `migrate_data` boolean `workflow_dispatch` input (default `false`) on `deploy-dev.yml` and `promote-prod.yml` (T026/T027), passed through to `deploy.reusable.yml`
 - [ ] T039 [US3] Verify (quickstart.md V4, V5): a schema change (new column) is applied before the app push and the app functions against it; a normal deploy run leaves existing records untouched; re-running with `migrate_data=true` twice upserts records with no duplicates and no record contents appear in the run logs (T037)
 
-**Blocked**: T039 needs a real dev environment with the solution imported (T031) and the alternate keys created (T032/T033) to run against — deferred until those are complete.
+**T031-T034 completed 2026-07-01 (live walkthrough)**: The project owner manually exported the unmanaged `MedTrackSolution` (containing `ppa_Medication`, `ppa_IntakeLog`) from the original environment and imported it into MedTrackDev. From there: exported + unpacked it into `solution/src/` via `pac solution export`/`pac solution unpack`; created both alternate keys (`ppa_medication_name_key` on `ppa_name`; `ppa_intakelog_medication_scheduledfor_key` on `ppa_medication`+`ppa_scheduledfor`) via the Dataverse Web API, confirmed `EntityKeyIndexStatus: Active` for both, published, then re-exported/re-unpacked so `solution/src/` reflects the real keys; updated `data/data-schema.xml` to reference them as active (no longer proposed/commented). Production (MedTrack) does not yet have this schema — it will receive it automatically the first time `promote-prod.yml` runs, since that's the pipeline's job.
+
+**T039 still open**: needs a real triggered workflow run against dev to verify end-to-end.
 
 **Checkpoint**: All four user stories work independently and together — the full CI/CD + ALM flow is complete.
 
