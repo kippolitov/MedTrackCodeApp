@@ -30,3 +30,13 @@ dist-ssr
 .playwright-mcp/
 /[0-9][0-9]-*.png
 /mock-*.png
+
+# Sensitive / environment-specific material — never committed (see
+# specs/003-github-actions-cicd/contracts/secrets-and-environments.contract.md)
+power.config.json
+localhost*.pem
+*.pfx
+*.key
+
+# Local pac solution export/pack scratch output
+/out/

@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{832c45e8-cf92-4f11-8595-f5c173001683}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="ppa_logname" select="1" icon="1" preview="1">
+        <row name="result" id="ppa_intakelogid">
+          <cell name="ppa_logname" width="300" />
+          <cell name="ppa_medication" width="150" />
+          <cell name="ppa_loggedat" width="150" />
+          <cell name="ppa_scheduledfor" width="150" />
+          <cell name="ppa_status" width="150" />
+          <cell name="ppa_injectionsite" width="150" />
+          <cell name="ppa_notes" width="150" />
+          <cell name="ppa_photourl" width="150" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>0</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="ppa_intakelog">
+          <attribute name="ppa_intakelogid" />
+          <attribute name="ppa_logname" />
+          <attribute name="createdon" />
+          <order attribute="ppa_logname" descending="false" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="0" />
+          </filter>
+          <attribute name="ppa_medication" />
+          <attribute name="ppa_loggedat" />
+          <attribute name="ppa_scheduledfor" />
+          <attribute name="ppa_status" />
+          <attribute name="ppa_injectionsite" />
+          <attribute name="ppa_notes" />
+          <attribute name="ppa_photourl" />
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Active Intake Logs" languagecode="1033" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>

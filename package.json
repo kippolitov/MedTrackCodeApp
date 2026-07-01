@@ -8,6 +8,7 @@
     "dev:mock": "vite --mode mock",
     "dev:live": "pac code run",
     "build": "tsc -b && vite build && pac code push",
+    "build:ci": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

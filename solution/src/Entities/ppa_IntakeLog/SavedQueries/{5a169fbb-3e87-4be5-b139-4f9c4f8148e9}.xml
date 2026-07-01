@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>1</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{5a169fbb-3e87-4be5-b139-4f9c4f8148e9}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="ppa_logname" select="1" icon="1" preview="1">
+        <row name="result" id="ppa_intakelogid">
+          <cell name="ppa_logname" width="300" />
+          <cell name="createdon" width="125" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>4</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="ppa_intakelog">
+          <attribute name="ppa_intakelogid" />
+          <attribute name="ppa_logname" />
+          <attribute name="createdon" />
+          <order attribute="ppa_logname" descending="false" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="0" />
+          </filter>
+          <filter type="or" isquickfindfields="1">
+            <condition attribute="ppa_logname" operator="like" value="{0}" />
+          </filter>
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Quick Find Active Intake Logs" languagecode="1033" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>
