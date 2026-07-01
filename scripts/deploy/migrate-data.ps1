@@ -132,7 +132,11 @@ for ($i = 0; $i -lt $intakeLogs.Count; $i++) {
         $logSkipped++
         continue
     }
-    $uri = "$apiBase/ppa_intakelogs(ppa_scheduledfor=$($log.ppa_scheduledfor),_ppa_medication_value=$medicationId)"
+    # ConvertFrom-Json auto-converts ISO-8601-looking strings into [DateTime], whose
+    # default ToString() renders the local culture format (e.g. "01/15/2026 08:00:00")
+    # rather than ISO 8601 -- which breaks the URL. Force explicit ISO 8601 UTC.
+    $scheduledFor = [DateTime]::Parse($log.ppa_scheduledfor.ToString(), $null, [System.Globalization.DateTimeStyles]::AdjustToUniversal -bor [System.Globalization.DateTimeStyles]::AssumeUniversal).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $uri = "$apiBase/ppa_intakelogs(ppa_scheduledfor=$scheduledFor,_ppa_medication_value=$medicationId)"
     $body = ConvertTo-PlainHashtable -Object $log -Exclude @('medicationName', 'ppa_scheduledfor') | ConvertTo-Json -Depth 5 -Compress
     try {
         Invoke-RestMethod -Method Patch -Uri $uri -Headers $writeHeaders -Body $body | Out-Null
