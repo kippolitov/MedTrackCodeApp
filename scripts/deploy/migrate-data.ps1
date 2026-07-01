@@ -80,13 +80,31 @@ function ConvertTo-PlainHashtable {
     return $table
 }
 
+# Surfaces the HTTP status + Dataverse error code/message from a failed request —
+# operational diagnostics only, never the record payload that was sent (FR-016).
+function Get-SafeErrorReason {
+    param($ErrorRecord)
+    $status = $ErrorRecord.Exception.Response.StatusCode
+    $reason = $ErrorRecord.Exception.Message
+    if ($ErrorRecord.ErrorDetails.Message) {
+        try {
+            $parsed = $ErrorRecord.ErrorDetails.Message | ConvertFrom-Json
+            if ($parsed.error.message) { $reason = $parsed.error.message }
+        } catch {
+            # Response body wasn't JSON; fall back to the exception message.
+        }
+    }
+    return "[$status] $reason"
+}
+
 # --- Medications: upsert by the ppa_name alternate key ---
 $medications = Read-DataFile 'ppa_medication.json'
 $medIdByName = @{}
 $medSuccess = 0
 $medFailure = 0
 
-foreach ($med in $medications) {
+for ($i = 0; $i -lt $medications.Count; $i++) {
+    $med = $medications[$i]
     $encodedName = [uri]::EscapeDataString($med.ppa_name)
     $uri = "$apiBase/ppa_medications(ppa_name='$encodedName')"
     $body = ConvertTo-PlainHashtable -Object $med | ConvertTo-Json -Depth 5 -Compress
@@ -96,6 +114,7 @@ foreach ($med in $medications) {
         $medSuccess++
     } catch {
         $medFailure++
+        Write-Host "Medication record #$i failed: $(Get-SafeErrorReason $_)"
     }
 }
 Write-Host "Medications: $medSuccess upserted, $medFailure failed (of $($medications.Count))"
@@ -106,7 +125,8 @@ $logSuccess = 0
 $logFailure = 0
 $logSkipped = 0
 
-foreach ($log in $intakeLogs) {
+for ($i = 0; $i -lt $intakeLogs.Count; $i++) {
+    $log = $intakeLogs[$i]
     $medicationId = $medIdByName[$log.medicationName]
     if (-not $medicationId) {
         $logSkipped++
@@ -119,6 +139,7 @@ foreach ($log in $intakeLogs) {
         $logSuccess++
     } catch {
         $logFailure++
+        Write-Host "Intake log record #$i failed: $(Get-SafeErrorReason $_)"
     }
 }
 Write-Host "Intake logs: $logSuccess upserted, $logFailure failed, $logSkipped skipped - unresolved medication (of $($intakeLogs.Count))"
