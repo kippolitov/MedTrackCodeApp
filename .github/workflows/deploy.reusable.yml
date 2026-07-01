@@ -99,15 +99,19 @@ jobs:
         run: ./scripts/deploy/deploy-app.ps1
 
       # --- Data (US3, FR-016): off by default, opt-in only, no record-content logging ---
+      # `pac data import` does not exist in the PAC CLI (the only related tool,
+      # `pac tool CMT`, is a Windows GUI executable and cannot run headlessly here),
+      # so migration is a self-contained Web API upsert script instead — see
+      # scripts/deploy/migrate-data.ps1 for the full rationale.
       - name: Migrate operational data (opt-in)
         if: ${{ inputs.migrate_data }}
         shell: pwsh
         env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
           PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
-        run: |
-          # --logConsole intentionally omitted / quiet: pac data import reports only
-          # aggregate success/failure and record counts, never field values (FR-016).
-          pac data import --dataFolder data --environment $env:PP_ENVIRONMENT_URL
+        run: ./scripts/deploy/migrate-data.ps1
 
       # --- Deployment record (FR-009) ---
       - name: Record deployment

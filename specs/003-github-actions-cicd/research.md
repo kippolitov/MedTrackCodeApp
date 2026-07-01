@@ -38,13 +38,15 @@ All Technical Context unknowns are resolved below. Each item follows Decision / 
 
 ## R5. Opt-in operational data migration
 
-**Decision**: OFF by default. A **`workflow_dispatch`** boolean input `migrate_data` (default `false`) on the deploy/promote workflows. When true, run `pac data import` using a **Configuration Migration schema** (`data/data-schema.xml`) that declares the `ppa_medication` and `ppa_intakelog` tables with **alternate keys** so records upsert by a stable key rather than duplicate (FR-016, FR-008). Data step gated behind the production approval and skipped entirely on normal `push`-triggered runs.
+**Decision**: OFF by default. A **`workflow_dispatch`** boolean input `migrate_data` (default `false`) on the deploy/promote workflows. When true, run `scripts/deploy/migrate-data.ps1`, a Web API upsert against `data/ppa_medication.json`/`data/ppa_intakelog.json`, addressing each record by its **alternate key** so records upsert by a stable key rather than duplicate (FR-016, FR-008). Data step gated behind the production approval and skipped entirely on normal `push`-triggered runs.
 
-**Rationale**: `pac data` (Configuration Migration) is the first-party, idempotent-by-alternate-key way to move Dataverse records; `workflow_dispatch` inputs are the native GitHub mechanism for per-run opt-in. Default-false guarantees routine merges never touch existing records (SC-011, edge case "Accidental data migration").
+**Rationale**: Idempotent-by-alternate-key upsert via the Dataverse Web API (`PATCH .../entityset(altkey='value')`) is a first-party, well-documented capability; `workflow_dispatch` inputs are the native GitHub mechanism for per-run opt-in. Default-false guarantees routine merges never touch existing records (SC-011, edge case "Accidental data migration").
 
 **Prerequisite/risk**: Idempotent upsert requires an **alternate key** on each table (e.g., a natural key on medication name + owner). If none exists, a setup task must add one; otherwise migration falls back to create-only and cannot be safely re-run. Flagged in data-model.md. Migrating real user health data also carries privacy weight — migration is manual, approval-gated, and must not log record contents.
 
-**Alternatives**: Custom Web API upsert script (rejected — reimplements CMT, more code to secure); always-on data sync (rejected — violates FR-016 and risks overwriting prod data).
+**Correction (found live 2026-07-01 during T039)**: This research originally planned `pac data import`/`export` (Configuration Migration) as the mechanism. That command **does not exist** in the PAC CLI (verified against v2.7.4 — `pac help`, `pac package --help`, `pac solution --help` show no `data` noun). The only related tool, `pac tool CMT`, is a separate Windows GUI executable (`DataMigrationUtility.exe`) with no documented headless/silent mode, so it cannot run on a GitHub-hosted `ubuntu-latest` runner. Replaced with a custom Web API upsert script — validated live: `PATCH .../ppa_medications(ppa_name='...')` upserts by the single-attribute alternate key; composite alternate keys involving a lookup attribute (`ppa_intakelog`'s medication+scheduledfor key) must be addressed using the lookup's `_<attribute>_value` EDM property name (e.g. `_ppa_medication_value=<guid>`), not the plain attribute name — this isn't obvious from the entity key metadata and returns a `0x80060888` "key ... not valid" error otherwise.
+
+**Alternatives**: `windows-latest` runner + CMT (rejected — CMT has no documented non-interactive/silent mode, high risk of not working headlessly at all); always-on data sync (rejected — violates FR-016 and risks overwriting prod data).
 
 ## R6. Externalizing environment/app identifiers
 

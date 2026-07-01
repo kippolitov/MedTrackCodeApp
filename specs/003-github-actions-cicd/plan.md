@@ -8,7 +8,7 @@
 
 Replace the current manual / Azure DevOps release path for the MedTrack Power Apps Code App with GitHub-native CI/CD. GitHub Actions will, on every pull request, install dependencies and run lint → type-check → build → tests → secret scan as a single required gate. On merge to `main` it will package the Code App and deploy it, along with the Dataverse schema (as a solution) and — only on explicit opt-in — operational data, to a **dev** environment automatically and to **production** behind a manual approval gate. In parallel the repository is hardened for public release: sensitive material (a committed `localhost` private key and real environment/app identifiers) is purged from history and rotated, environment identifiers are externalized to per-environment GitHub secrets/variables, and a secret-scanning gate blocks any future leaks.
 
-Technical approach: GitHub Actions workflows using the official Power Platform Actions + `pac` CLI authenticated with a service principal; Dataverse schema managed as an unpacked solution under source control (pack + import); opt-in data migration via the Configuration Migration data format (`pac data`, upsert by stable alternate key); GitHub Environments (`dev`, `production`) providing per-stage secrets, required-reviewer approval, and concurrency-based serialization; `gitleaks` as the PR secret-scanning gate; `git filter-repo` for the one-time history purge.
+Technical approach: GitHub Actions workflows using the official Power Platform Actions + `pac` CLI authenticated with a service principal; Dataverse schema managed as an unpacked solution under source control (pack + import); opt-in data migration via a Web API upsert script keyed by stable alternate key (`scripts/deploy/migrate-data.ps1` — `pac data import` was assumed available but does not exist in the PAC CLI, found live 2026-07-01 during T039); GitHub Environments (`dev`, `production`) providing per-stage secrets, required-reviewer approval, and concurrency-based serialization; `gitleaks` as the PR secret-scanning gate; `git filter-repo` for the one-time history purge.
 
 ## Technical Context
 
@@ -79,7 +79,8 @@ solution/                      # Dataverse schema as an unpacked (source-control
 └── solution-metadata files    # solution.xml, customizations.xml, etc. (pac solution unpack output)
 
 data/                          # Opt-in operational data migration assets
-├── data-schema.xml            # Configuration Migration schema (tables + alternate keys for upsert)
+├── ppa_medication.json         # Sample medication records, keyed by ppa_name alternate key
+├── ppa_intakelog.json          # Sample intake log records, keyed by medicationName + ppa_scheduledfor
 └── README.md                  # How opt-in migration is triggered and scoped
 
 scripts/
@@ -87,7 +88,8 @@ scripts/
 │   └── render-power-config.(ps1|sh)   # Build power.config.json from template + env secrets/vars
 ├── deploy/
 │   ├── auth.(ps1|sh)                  # Non-interactive pac auth via service principal
-│   └── deploy-app.(ps1|sh)            # pac code push wrapper (reads rendered config)
+│   ├── deploy-app.(ps1|sh)            # pac code push wrapper (reads rendered config)
+│   └── migrate-data.ps1               # Web API upsert of data/*.json (pac data import doesn't exist)
 └── security/
     └── history-purge-runbook.md       # One-time git filter-repo + rotation procedure
 

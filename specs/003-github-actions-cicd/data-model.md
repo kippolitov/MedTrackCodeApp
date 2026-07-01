@@ -35,9 +35,10 @@ A traceable record of one deployment.
 - **Rules**: Imported and published **before** the app push (FR-007); destructive changes to production require approval (FR-014).
 
 ### Data Change Set (opt-in)
-- **Location**: `data/data-schema.xml` (Configuration Migration schema) + exported data package.
+- **Location**: `data/ppa_medication.json`, `data/ppa_intakelog.json` (plain records), upserted by `scripts/deploy/migrate-data.ps1` via the Dataverse Web API.
 - **Fields**: enabled flag (`migrate_data`, default false), tables in scope, alternate-key mapping for upsert.
 - **Rules**: OFF by default; runs only on explicit `workflow_dispatch` opt-in; idempotent upsert by alternate key; approval-gated for production; never logs record contents (FR-016, FR-008).
+- **Note**: originally planned as a Configuration Migration schema driven by `pac data import` — that command does not exist in the PAC CLI (the only related tool, `pac tool CMT`, is a Windows GUI executable, not scriptable on a Linux runner). Found live 2026-07-01 during T039; replaced with the Web API upsert script above.
 
 ### Sensitive Material (governed, must be absent)
 - **Instances**: `localhost-key.pem`, `localhost.pem` (private key/cert); prior committed `environmentId`/`appId`; any credential/token.

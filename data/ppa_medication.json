@@ -1,0 +1,10 @@
+[
+  {
+    "ppa_name": "Sample Aspirin",
+    "ppa_dosage": "100mg",
+    "ppa_frequency": 894250000,
+    "ppa_method": 894250000,
+    "ppa_instructions": "Take with food.",
+    "ppa_isactive": true
+  }
+]
