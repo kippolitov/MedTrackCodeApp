@@ -36,7 +36,9 @@ jobs:
           cache: npm
 
       - name: Install pac CLI
-        uses: microsoft/powerplatform-actions/actions/install@v1
+        uses: microsoft/powerplatform-actions/actions-install@v1
+        with:
+          add-tools-to-path: true
 
       - name: Install dependencies
         run: npm ci
@@ -68,7 +70,7 @@ jobs:
           app-id: ${{ secrets.PP_CLIENT_ID }}
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
-          path: out/MedTrackCore.zip
+          solution-file: out/MedTrackCore.zip
 
       - name: Publish solution customizations
         uses: microsoft/powerplatform-actions/publish-solution@v1
