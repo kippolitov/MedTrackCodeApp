@@ -22,9 +22,9 @@ if ($missing.Count -gt 0) {
 
 Write-Host "Authenticating to $($env:PP_ENVIRONMENT_URL) via service principal $($env:PP_CLIENT_ID)..."
 
-# --accept-cleartext-caching: GitHub-hosted Linux runners have no OS keyring
-# (libsecret) available, so pac auth create needs this to cache the token for
-# reuse by later steps/processes in the same (ephemeral, single-use) runner.
+# --accept-cleartext-caching: GitHub-hosted runners have no OS keyring
+# available, so pac auth create needs this to cache the token for reuse by
+# later steps/processes in the same (ephemeral, single-use) runner.
 pac auth create `
     --applicationId $env:PP_CLIENT_ID `
     --clientSecret $env:PP_CLIENT_SECRET `
@@ -37,3 +37,18 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Authenticated successfully."
+
+# pac auth create's persisted profile does not retain a usable client secret
+# by design (threat-model choice, not a bug) -- when a later `pac` process
+# (e.g. `pac code push`) needs to refresh an access token via MSAL's
+# ConfidentialClient, it has no refresh token and no secret, and fails with
+# AADSTS7000215 "Invalid client secret provided". This reproduces identically
+# regardless of OS/keyring (confirmed live 2026-07-02 on both ubuntu-latest
+# and windows-latest runners). The documented fix, from a Microsoft
+# powerplatform-vscode maintainer, is to expose the secret via a well-known
+# env var that pac's internal refresh logic looks for:
+# https://github.com/microsoft/powerplatform-vscode/issues/297#issuecomment-1663066345
+# https://github.com/microsoft/powerplatform-vscode/issues/456
+if ($env:GITHUB_ENV) {
+    "PAC_CLI_SPN_SECRET=$($env:PP_CLIENT_SECRET)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+}
