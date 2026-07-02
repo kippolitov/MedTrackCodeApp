@@ -51,18 +51,20 @@ jobs:
       # app-id/client-secret/tenant-id inputs; they don't need (or preserve)
       # a persisted `pac auth` profile.
       #
-      # solution-type is Unmanaged in dev (editable maker-portal layer for
-      # active development) and Managed in production (a locked layer with no
-      # customizable surface, the correct ALM shape for a downstream/prod
-      # environment). Packed from the same source-controlled solution/src on
-      # every run -- packing is a build-time flag, not a source-content
-      # difference, so no separate "export as managed" step is needed.
+      # This reusable workflow is only used for `dev` -- it always packs and
+      # imports Unmanaged. `<Managed>0</Managed>` is baked into
+      # solution/src/Other/Solution.xml (recorded at unpack time), so
+      # pack-solution cannot simply be told to emit Managed from this same
+      # source tree (it errors: "Solution package type did not match
+      # requested type" -- found live 2026-07-02). Production instead gets a
+      # true managed solution via a live export-as-managed from dev,
+      # implemented as separate jobs in promote-prod.yml.
       - name: Pack solution
         uses: microsoft/powerplatform-actions/pack-solution@v1
         with:
           solution-folder: solution/src
           solution-file: out/MedTrackCore.zip
-          solution-type: ${{ inputs.environment == 'production' && 'Managed' || 'Unmanaged' }}
+          solution-type: Unmanaged
 
       - name: Import solution
         uses: microsoft/powerplatform-actions/import-solution@v1
