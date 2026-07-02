@@ -90,7 +90,19 @@ jobs:
 
   deploy-production:
     needs: sync-dev-and-export
-    runs-on: ubuntu-latest
+    # windows-latest, not ubuntu-latest: `pac auth create`'s SP profile
+    # (secret included) persists via Windows Credential Manager (DPAPI) here,
+    # which just works. On Linux runners it falls back to an unprotected
+    # plaintext cache (no keyring daemon available even with libsecret
+    # installed) that a later step's `pac code push` process fails to reload
+    # correctly -- surfaces as AADSTS7000215 "Invalid client secret provided"
+    # even though the same secret authenticates fine elsewhere in the same
+    # job (e.g. the import-solution action, which doesn't round-trip through
+    # this cache). Found live 2026-07-02; libsecret-1-0 alone didn't fix it
+    # (confirmed: still no working keyring service headlessly). The
+    # sync-dev-and-export job above stays on ubuntu-latest -- it only uses
+    # official actions with their own direct auth, never a persisted profile.
+    runs-on: windows-latest
     environment: production
     permissions:
       contents: read
@@ -111,16 +123,6 @@ jobs:
         uses: microsoft/powerplatform-actions/actions-install@v1
         with:
           add-tools-to-path: true
-
-      # Without libsecret, `pac auth create`'s SP profile (secret included)
-      # falls back to an unprotected plaintext cache that a later step's
-      # `pac code push` process fails to reload correctly -- surfaces as
-      # AADSTS7000215 "Invalid client secret provided" even though the same
-      # secret authenticates fine elsewhere in the same job (e.g. the
-      # import-solution action, which doesn't round-trip through this cache).
-      # Found live 2026-07-02.
-      - name: Install libsecret (pac CLI credential cache on Linux runners)
-        run: sudo apt-get update && sudo apt-get install -y libsecret-1-0
 
       - name: Install dependencies
         run: npm ci
@@ -187,8 +189,12 @@ jobs:
         run: ./scripts/deploy/migrate-data.ps1
 
       # --- Deployment record (FR-009) ---
+      # shell: bash -- windows-latest defaults `run:` to pwsh, but this
+      # script uses bash heredoc/grouping syntax. Git Bash ships on
+      # windows-latest runners, so `shell: bash` works unchanged here.
       - name: Record deployment
         if: always()
+        shell: bash
         run: |
           {
             echo "### Deployment summary"
