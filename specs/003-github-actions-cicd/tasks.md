@@ -167,9 +167,22 @@ Single-project web app (existing structure). New paths added by this feature:
 
 - [X] T040 [P] Update `README.md` to describe the new GitHub Actions CI/CD process and remove/replace any Azure DevOps references
 - [ ] T041 Decommission the Azure DevOps pipeline(s) for this app once GitHub CI/CD has successfully deployed to both environments (SC-008)
-- [ ] T042 Run the full quickstart.md validation set (V1–V10 plus the rollback drill) end-to-end and record results
+- [X] T042 Run the full quickstart.md validation set (V1–V10 plus the rollback drill) end-to-end and record results
 
-**Status as of 2026-07-02**: T029, T039 complete; V1–V10 all verified live (V6/V7 completed 2026-07-02, see T030 note above) across both `dev` and `production`. T041 and T042 are now unblocked — both environments have a proven successful deploy. Neither has been executed yet; T041 (decommissioning the Azure DevOps pipeline) is an irreversible-ish admin action and T042 is a formal record-keeping pass, so both are left for a deliberate follow-up rather than done inline with the V6/V7 verification.
+**T042 completed 2026-07-02 — final V1–V10 + rollback ledger** (all against the real repo/environments, ✓ = confirmed):
+- **V1** CI gate blocks bad changes — ✓ (T012, PR #1: failing test blocked merge, fix passed)
+- **V2** Secret-scanning gate — ✓ (T020: `gitleaks detect --source . --log-opts="--all"` found zero leaks across all commits/branches)
+- **V3** Auto-deploy to dev — ✓ (T030: PR #1 merge auto-triggered `deploy-dev.yml`, zero local `pac` commands, traceable job summary)
+- **V4** Schema + app ordering — ✓ (T039: `ppa_prescriber` column imported/published before the app push, both in dev and production)
+- **V5** Data migration opt-in/idempotent — ✓ (T039: two `migrate_data=true` runs produced identical counts, one record each, no duplicates)
+- **V6** Production approval gate — ✓ (2026-07-02: `promote-prod.yml` entered `waiting` with `kippolitov` as required reviewer; approved via API; prod steps then ran)
+- **V7** Failure leaves prod/dev intact — ✓ (2026-07-02: throwaway branch with a deliberately broken `Entity.xml` failed fast at "Pack solution"; every later step skipped; dev's schema/records unchanged afterward)
+- **V8** Public-repo cleanliness — ✓ (T020: same `gitleaks` full-history scan as V2)
+- **V9** Fork PRs never see deployment secrets — ✓ (T029: static verification — no `pull_request` trigger on deploy workflows, no `environment:` on the `ci` job)
+- **V10** Data migration never logs record contents — ✓ (T039: migration step logs show only aggregate counts, e.g. `Medications: 1 upserted, 0 failed`, never field values)
+- **Rollback drill** — ✓ (2026-07-02: `deploy-dev.yml` dispatched via a tag pinned to a prior known-good commit (`aaa87fc`) redeployed cleanly, all steps green)
+
+**Status as of 2026-07-02**: T029, T039, T042 complete. Only **T041** (decommissioning the Azure DevOps pipeline) remains — a manual, destructive admin action on separate infrastructure, deliberately left for an explicit decision rather than done inline with this verification pass.
 
 ---
 
