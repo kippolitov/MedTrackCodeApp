@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react'
 import { format } from 'date-fns'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import StatsBar from '@/components/dashboard/stats-bar'
 import ScheduleList from '@/components/dashboard/schedule-list'
@@ -15,6 +16,7 @@ import type { Ppa_medications } from '@/generated/models/Ppa_medicationsModel'
 import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
 
 export default function HomePage() {
+  const navigate = useNavigate()
   const { stats, isLoading, isError } = useAdherence()
   const overdueMedications = useOverdue()
   const { firstName } = useUser()
@@ -87,7 +89,7 @@ export default function HomePage() {
             <p className="text-sm text-muted-foreground">
               No active medications yet. Add your first medication to get started.
             </p>
-            <Button onClick={() => window.location.assign('/medications')}>
+            <Button onClick={() => navigate('/medications')}>
               Add Medication
             </Button>
           </div>
