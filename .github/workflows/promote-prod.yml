@@ -2,7 +2,21 @@ name: Promote to Production
 
 # Manual promotion only (FR-017) — never triggered by push or pull_request.
 # The `production` GitHub Environment's required reviewers enforce the
-# approval gate (FR-014) before any step in deploy.reusable.yml runs.
+# approval gate (FR-014) before the deploy-production job runs.
+#
+# Two-job design (found live 2026-07-02): production needs a true *managed*
+# solution, not the same unmanaged package dev gets. `pac`/SolutionPackager
+# cannot convert types locally -- the only supported conversion is importing
+# unmanaged into an environment and exporting managed from it (see
+# https://learn.microsoft.com/power-platform/alm/move-from-unmanaged-managed-alm).
+# So this workflow:
+#   1. sync-dev-and-export -- re-imports solution/src (unmanaged) into dev,
+#      overwriting any unsynced manual dev changes, so the managed export
+#      always reflects exactly the commit being promoted, never ambient dev
+#      drift. Then exports that solution from dev as Managed and uploads it
+#      as a build artifact.
+#   2. deploy-production -- imports that managed artifact into production,
+#      then pushes the Code App and (optionally) migrates data.
 on:
   workflow_dispatch:
     inputs:
@@ -13,9 +27,166 @@ on:
         default: false
 
 jobs:
-  deploy:
-    uses: ./.github/workflows/deploy.reusable.yml
-    with:
-      environment: production
-      migrate_data: ${{ inputs.migrate_data || false }}
-    secrets: inherit
+  sync-dev-and-export:
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+    # Shares dev's concurrency group with deploy-dev.yml so the two workflows
+    # never write to the dev environment at the same time.
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pac CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1
+        with:
+          add-tools-to-path: true
+
+      - name: Pack solution (Unmanaged)
+        uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: solution/src
+          solution-file: out/MedTrackCore.zip
+          solution-type: Unmanaged
+
+      - name: Sync dev to source-controlled solution
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ vars.PP_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          solution-file: out/MedTrackCore.zip
+
+      - name: Publish dev customizations
+        uses: microsoft/powerplatform-actions/publish-solution@v1
+        with:
+          environment-url: ${{ vars.PP_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+
+      - name: Export solution as Managed
+        uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{ vars.PP_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          solution-name: MedTrackSolution
+          solution-output-file: out/MedTrackCore_managed.zip
+          managed: true
+
+      - name: Upload managed solution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: managed-solution
+          path: out/MedTrackCore_managed.zip
+          retention-days: 14
+
+  deploy-production:
+    needs: sync-dev-and-export
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install pac CLI
+        uses: microsoft/powerplatform-actions/actions-install@v1
+        with:
+          add-tools-to-path: true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build:ci
+
+      - name: Download managed solution artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: managed-solution
+          path: out
+
+      - name: Import solution (Managed)
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ vars.PP_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          solution-file: out/MedTrackCore_managed.zip
+
+      - name: Publish solution customizations
+        uses: microsoft/powerplatform-actions/publish-solution@v1
+        with:
+          environment-url: ${{ vars.PP_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+
+      # --- App (US2, FR-005): pac code push and pac data import (below) use
+      # the pac CLI directly, so authenticate immediately before them here
+      # rather than earlier — a profile created before the actions above ran
+      # is not reliably present afterward.
+      - name: Authenticate to Power Platform
+        shell: pwsh
+        env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
+          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
+        run: ./scripts/deploy/auth.ps1
+
+      - name: Render power.config.json
+        shell: pwsh
+        env:
+          PP_ENVIRONMENT_ID: ${{ vars.PP_ENVIRONMENT_ID }}
+          PP_APP_ID: ${{ vars.PP_APP_ID }}
+        run: ./scripts/ci/render-power-config.ps1
+
+      - name: Deploy Code App
+        shell: pwsh
+        run: ./scripts/deploy/deploy-app.ps1
+
+      # --- Data (US3, FR-016): off by default, opt-in only, no record-content logging ---
+      - name: Migrate operational data (opt-in)
+        if: ${{ inputs.migrate_data }}
+        shell: pwsh
+        env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
+          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
+        run: ./scripts/deploy/migrate-data.ps1
+
+      # --- Deployment record (FR-009) ---
+      - name: Record deployment
+        if: always()
+        run: |
+          {
+            echo "### Deployment summary"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Environment: \`production\`"
+            echo "- Actor: \`${{ github.actor }}\`"
+            echo "- Triggered by: \`${{ github.event_name }}\`"
+            echo "- Data migration requested: \`${{ inputs.migrate_data }}\`"
+            echo "- Outcome: \`${{ job.status }}\`"
+            echo "- Timestamp: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
