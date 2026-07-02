@@ -50,12 +50,19 @@ jobs:
       # These official actions authenticate internally via their own
       # app-id/client-secret/tenant-id inputs; they don't need (or preserve)
       # a persisted `pac auth` profile.
+      #
+      # solution-type is Unmanaged in dev (editable maker-portal layer for
+      # active development) and Managed in production (a locked layer with no
+      # customizable surface, the correct ALM shape for a downstream/prod
+      # environment). Packed from the same source-controlled solution/src on
+      # every run -- packing is a build-time flag, not a source-content
+      # difference, so no separate "export as managed" step is needed.
       - name: Pack solution
         uses: microsoft/powerplatform-actions/pack-solution@v1
         with:
           solution-folder: solution/src
           solution-file: out/MedTrackCore.zip
-          solution-type: Unmanaged
+          solution-type: ${{ inputs.environment == 'production' && 'Managed' || 'Unmanaged' }}
 
       - name: Import solution
         uses: microsoft/powerplatform-actions/import-solution@v1
