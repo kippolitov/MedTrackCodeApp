@@ -20,10 +20,18 @@ if (-not (Test-Path $configPath)) {
 
 Write-Host "Pushing Code App using $configPath..."
 
-pac --log-to-console code push
+# `pac code push` can print an HTTP error (e.g. the app's appId belonging to a
+# different environment) and still exit 0 -- found live 2026-07-02 when a
+# reused appId hit "InvalidEnvironmentName" but the step still reported
+# success. Capture output and fail on either a non-zero exit code or a
+# surfaced HTTP error, rather than trusting the exit code alone.
+pac --log-to-console code push 2>&1 | Tee-Object -Variable capturedOutput | ForEach-Object { Write-Host $_ }
 
 if ($LASTEXITCODE -ne 0) {
     throw "pac code push failed (exit code $LASTEXITCODE)."
+}
+if ($capturedOutput -match 'HTTP error status') {
+    throw "pac code push reported an HTTP error but exited 0 -- treating as a failure. See the output above for details."
 }
 
 Write-Host "Code App pushed successfully."
