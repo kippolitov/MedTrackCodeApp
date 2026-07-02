@@ -166,7 +166,7 @@ Single-project web app (existing structure). New paths added by this feature:
 **Purpose**: Wrap-up and validation across all stories.
 
 - [X] T040 [P] Update `README.md` to describe the new GitHub Actions CI/CD process and remove/replace any Azure DevOps references
-- [ ] T041 Decommission the Azure DevOps pipeline(s) for this app once GitHub CI/CD has successfully deployed to both environments (SC-008)
+- [X] T041 Decommission the Azure DevOps pipeline(s) for this app once GitHub CI/CD has successfully deployed to both environments (SC-008)
 - [X] T042 Run the full quickstart.md validation set (V1–V10 plus the rollback drill) end-to-end and record results
 
 **T042 completed 2026-07-02 — final V1–V10 + rollback ledger** (all against the real repo/environments, ✓ = confirmed):
@@ -182,7 +182,9 @@ Single-project web app (existing structure). New paths added by this feature:
 - **V10** Data migration never logs record contents — ✓ (T039: migration step logs show only aggregate counts, e.g. `Medications: 1 upserted, 0 failed`, never field values)
 - **Rollback drill** — ✓ (2026-07-02: `deploy-dev.yml` dispatched via a tag pinned to a prior known-good commit (`aaa87fc`) redeployed cleanly, all steps green)
 
-**Status as of 2026-07-02**: T029, T039, T042 complete. Only **T041** (decommissioning the Azure DevOps pipeline) remains — a manual, destructive admin action on separate infrastructure, deliberately left for an explicit decision rather than done inline with this verification pass.
+**T041 completed 2026-07-02**: checked whether there was actually anything to decommission before acting. `az pipelines list` and `az pipelines release definition list` against the Azure DevOps `MedTrack` project (org `kippolitov0726`) both returned zero results — no build or classic-release pipeline was ever created there. The `MedTrackADO` git remote only ever served as source hosting, not CI/CD. Nothing to disable or delete; T041 is satisfied by this confirmation.
+
+**Status as of 2026-07-02**: All tasks (T001–T042) complete. The GitHub Actions CI/CD migration is fully implemented and verified end-to-end against the real repo and both live Power Platform environments.
 
 ---
 
