@@ -101,4 +101,18 @@ Invoke-RestMethod -Uri "https://org.crm6.dynamics.com/api/data/v9.2/EntityDefini
 - Platform: Windows
 - Agent Teams are enabled (experimental)
 - Claude in Chrome is available for browser automation and visual testing
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`gh` CLI). External PRs are **not** a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary — `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 - Auth via `pac auth` CLI (not MCP server)
