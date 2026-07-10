@@ -2,6 +2,8 @@
 
 > A medication adherence tracker that proves the Power Platform can be treated as a real engineering target — not just a low-code escape hatch.
 
+![Demo](demo.gif)
+
 MedTrack is a **React 19 + TypeScript Power Apps Code App** backed by **Microsoft Dataverse**. It lets users manage their medication schedules, log every dose outcome, and review adherence trends over time — with a pipeline that ships the whole thing without anyone touching a terminal.
 
 ---

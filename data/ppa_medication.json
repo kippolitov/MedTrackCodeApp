@@ -1,10 +1,53 @@
 [
   {
-    "ppa_name": "Sample Aspirin",
-    "ppa_dosage": "100mg",
+    "ppa_name": "Metformin",
+    "ppa_dosage": "500mg",
     "ppa_frequency": 894250000,
     "ppa_method": 894250000,
-    "ppa_instructions": "Take with food.",
+    "ppa_remindertime": "08:00",
+    "ppa_isactive": true,
+    "ppa_instructions": "Take with food."
+  },
+  {
+    "ppa_name": "Insulin Glargine",
+    "ppa_dosage": "10 units/mL",
+    "ppa_frequency": 894250000,
+    "ppa_method": 894250001,
+    "ppa_remindertime": "21:00",
+    "ppa_isactive": true,
+    "ppa_instructions": "Rotate injection sites. Keep refrigerated."
+  },
+  {
+    "ppa_name": "Vitamin D3",
+    "ppa_dosage": "2000 IU",
+    "ppa_frequency": 894250000,
+    "ppa_method": 894250000,
+    "ppa_remindertime": "09:00",
     "ppa_isactive": true
+  },
+  {
+    "ppa_name": "Amlodipine",
+    "ppa_dosage": "5mg",
+    "ppa_frequency": 894250000,
+    "ppa_method": 894250000,
+    "ppa_remindertime": "08:00",
+    "ppa_isactive": true
+  },
+  {
+    "ppa_name": "Fluticasone",
+    "ppa_dosage": "100mcg/dose",
+    "ppa_frequency": 894250000,
+    "ppa_method": 894250003,
+    "ppa_remindertime": "07:30",
+    "ppa_isactive": true,
+    "ppa_instructions": "Rinse mouth after use."
+  },
+  {
+    "ppa_name": "Ibuprofen",
+    "ppa_dosage": "400mg",
+    "ppa_frequency": 894250003,
+    "ppa_method": 894250000,
+    "ppa_isactive": false,
+    "ppa_instructions": "Take as needed for pain. Do not exceed 3 consecutive days."
   }
 ]
