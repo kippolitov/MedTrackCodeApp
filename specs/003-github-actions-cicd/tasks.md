@@ -211,6 +211,23 @@ Found after T042 was marked complete, while investigating a "Sorry, we didn't fi
 
 ---
 
+## Post-correction fix (2026-07-13): `--solutionName` resolves the SP code push 500
+
+A commenter ([mcp-ggeroulas](https://github.com/microsoft/PowerAppsCodeApps/issues/394#issuecomment)) on the filed issue reported that associating the Code App with an explicit Dataverse solution — rather than letting `pac code push` target the implicit default solution — avoids the 500 under service-principal auth. Applied and confirmed live (PR #19): `deploy-app.ps1` now passes `--solutionName MedTrackSolution` (the same schema solution already used elsewhere in this repo) to `pac code push`.
+
+**Verification (dev)**: ran `deploy-dev.yml` via `workflow_dispatch` against real SP auth (run [29232273736](https://github.com/kippolitov/MedTrackCodeApp/actions/runs/29232273736)) — Deploy Code App step logged `App pushed successfully.` with a play URL whose `sourcetime` query param matched the run's actual wall-clock time (ruling out a stale/cached response), and no `HTTP error status` string appeared anywhere in the log (the hardened check from fix #2 above would have failed the step if it had).
+
+**Verification (production)**: after merging PR #19 to `main`, ran `promote-prod.yml` via `workflow_dispatch` (run [29233148830](https://github.com/kippolitov/MedTrackCodeApp/actions/runs/29233148830)), approved through the required-reviewer gate on the `production` environment, and confirmed the same clean result on the `deploy-production` job's Deploy Code App step: `App pushed successfully.` for the production appId/environment, SP auth profile (`ProfileType = Application`), `sourcetime` matching wall-clock, no `HTTP error status` anywhere in the log.
+
+**Corrected current state (supersedes the previous section's blocker claim)**:
+- Code App content deployment via the service-principal-driven CI pipeline **now works** for both dev and production.
+- The manual interactive-auth stopgap is no longer required going forward.
+- microsoft/PowerAppsCodeApps#394 remains open upstream (root cause — why omitting `--solutionName` 500s under SP auth specifically — is still unexplained by Microsoft; commented there with our repro to help narrow it down), but is no longer a blocker for this repo.
+
+**Status as of 2026-07-13**: US2's Code App push automation is fixed and verified end-to-end for dev and production. T042's V6/V7 and this file's FR-005/FR-006 conformance are re-verified — the CI/CD pipeline now fully deploys schema and app content non-interactively, with no local `pac` commands required.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
