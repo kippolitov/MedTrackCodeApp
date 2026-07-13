@@ -20,12 +20,21 @@ if (-not (Test-Path $configPath)) {
 
 Write-Host "Pushing Code App using $configPath..."
 
+# --solutionName: `pac code push` under a service-principal identity returns a
+# generic HTTP 500 when the Code App isn't associated with an explicit
+# solution (confirmed live 2026-07-02, filed as
+# https://github.com/microsoft/PowerAppsCodeApps/issues/394). A maintainer
+# workaround (see issue #394 comments) is to bundle/associate the app with a
+# real solution and pass it explicitly -- reusing the same schema solution
+# (MedTrackSolution) already used for tables/etc. in this repo.
+$solutionName = 'MedTrackSolution'
+
 # `pac code push` can print an HTTP error (e.g. the app's appId belonging to a
 # different environment) and still exit 0 -- found live 2026-07-02 when a
 # reused appId hit "InvalidEnvironmentName" but the step still reported
 # success. Capture output and fail on either a non-zero exit code or a
 # surfaced HTTP error, rather than trusting the exit code alone.
-pac --log-to-console code push 2>&1 | Tee-Object -Variable capturedOutput | ForEach-Object { Write-Host $_ }
+pac --log-to-console code push --solutionName $solutionName 2>&1 | Tee-Object -Variable capturedOutput | ForEach-Object { Write-Host $_ }
 
 if ($LASTEXITCODE -ne 0) {
     throw "pac code push failed (exit code $LASTEXITCODE)."
