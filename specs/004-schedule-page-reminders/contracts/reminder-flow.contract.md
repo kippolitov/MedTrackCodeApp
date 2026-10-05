@@ -12,7 +12,8 @@ FR-014 to FR-027 and User Stories 2 and 3. The rules it applies are in
 | Display name | MedTrack – Daily Reminder |
 | Solution | `MedTrackSolution` |
 | Type | Scheduled cloud flow (solution-aware) |
-| Connection references | `ppa_MedTrackDataverse`, `ppa_MedTrackOutlook` |
+| Owner | The deployment service principal |
+| Connection references | `ppa_MedTrackDataverse` (the owner's connection), `ppa_MedTrackMail` |
 | Environment variables read | `ppa_ReminderRecipientEmail`, `ppa_ReminderTimeZone` |
 | Writes | `ppa_reminderrun` only. Never Medications or Intake Logs (FR-027) |
 
@@ -47,7 +48,8 @@ Normal night: the 00:00 run does the work and the 01:00–03:00 runs stop at ste
    3. Due today → add to the **due** list. Follow-up owed → add to the **follow-up** list.
       Otherwise nothing.
 7. **Nothing listed** → update the row: outcome Nothing To Send, both counts 0. End.
-8. **Send one email** (see below) with Secure Inputs and Secure Outputs on.
+8. **Send one email** (see below) with the Mail connector's *Send an email notification
+   (V3)* action, Secure Inputs and Secure Outputs on.
 9. **Record success.** Update the row: outcome Sent, both counts, `ppa_Summary`.
 
 Steps 4 to 9 sit in one scope. Any failure inside it runs **Failure**.
@@ -56,8 +58,9 @@ Steps 4 to 9 sit in one scope. Any failure inside it runs **Failure**.
 
 - Update the row: outcome Failed, `ppa_ErrorStep` = `<name of the failed step> (<status code>)`.
 - The raw error message is **not** stored anywhere by the flow.
-- End the run as **Failed**, so it is visible in run history and in Power Automate's own
-  failure notifications.
+- End the run as **Failed**, so it is visible in run history. Power Automate's own failure
+  emails go to the flow owner, which is the service principal, so nobody receives them:
+  the Reminder Run row is the record the owner checks.
 - If the failure happened **after** the send action succeeded (step 9 itself failed), the
   outcome is left as Started, not Failed, so no retry can send a second email.
 
@@ -65,6 +68,7 @@ Steps 4 to 9 sit in one scope. Any failure inside it runs **Failure**.
 
 | Part | Content |
 |---|---|
+| From | a Microsoft service address (the Mail connector does not send as the owner) |
 | To | value of `ppa_ReminderRecipientEmail` |
 | Subject | `MedTrack: <n> due today` · `MedTrack: <n> due today, <m> follow-up(s)` · `MedTrack: <m> follow-up(s)` |
 | Body | HTML, two sections, each omitted when empty |

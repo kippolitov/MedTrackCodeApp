@@ -125,7 +125,7 @@ enforces this (research R9).
 | Schema name | Connector | Used for |
 |---|---|---|
 | `ppa_MedTrackDataverse` | Microsoft Dataverse (`shared_commondataserviceforapps`) | WhoAmI, list Medications and Intake Logs, create/update Reminder Run |
-| `ppa_MedTrackOutlook` | Office 365 Outlook (`shared_office365`) | Send the reminder email |
+| `ppa_MedTrackMail` | Mail (`shared_sendmail`) | Send the reminder email |
 
 Connections are created by the owner in each environment and are never source-controlled.
 Their ids reach the import step through GitHub Environment variables (see
@@ -186,9 +186,11 @@ reminder. Names are recorded as text in `ppa_Summary` instead.
 | Principal | `ppa_medication` | `ppa_intakelog` | `ppa_reminderrun` | Environment variables |
 |---|---|---|---|---|
 | App user (the owner, in the Code App) | unchanged | unchanged | none required — the app does not read this table | — |
-| Flow's Dataverse connection (the owner) | Read (own rows) | Read (own rows) | Create, Read, Write (own rows) | Read definition and value |
-| Deployment service principal | unchanged | unchanged | schema only (import) | definition only (import) |
+| Flow's Dataverse connection (the owner's, shared with the service principal) | Read (own rows) | Read (own rows) | Create, Read, Write (own rows) | Read definition and value |
+| Deployment service principal (owns the flow) | unchanged | unchanged | schema only (import) | definition only (import) |
 
+- The service principal owns the flow but the flow's data access is the owner's: every
+  Dataverse action runs through the owner's connection, so it sees the owner's rows only.
 - No security role is source-controlled in `solution/src` today. The privileges on
   `ppa_reminderrun` are added to whichever role already grants the owner access to
   `ppa_medication` and `ppa_intakelog`. If that role is System Administrator or System

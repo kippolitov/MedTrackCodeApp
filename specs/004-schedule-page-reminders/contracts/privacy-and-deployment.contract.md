@@ -11,8 +11,7 @@ and extends [specs/003-github-actions-cicd/contracts/secrets-and-environments.co
 | Reminder address | Environment variable **value** in each Power Platform environment, outside `MedTrackSolution` | No | No |
 | `ppa_ReminderRecipientEmail` definition (no default, no value) | `solution/src` | Yes — the name only | Yes |
 | Time zone | GitHub Environment variable `REMINDER_TIME_ZONE` → deployment settings → environment variable value | No | Yes (not public) |
-| Connection ids | GitHub Environment variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_OUTLOOK_ID` | No | Yes (not public) |
-| Flow owner id | GitHub Environment variable `REMINDER_FLOW_OWNER_ID` | No | Yes (not public) |
+| Connection ids | GitHub Environment variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` | No | Yes (not public) |
 | Connections (credentials) | Created by the owner in each environment | No | No |
 
 GitHub Environment variables are set separately for `dev` and `production`.
@@ -57,12 +56,13 @@ solution content from publishing the address.
 
 ### One-time setup per environment (owner)
 
-1. Create a Microsoft Dataverse connection and an Office 365 Outlook connection.
+1. Create a Microsoft Dataverse connection (signed in as the owner) and a Mail connection.
 2. Share each with the deployment service principal, permission "Can use".
-3. Record the two connection ids, the owner's system user id and the time zone as GitHub
-   Environment variables.
+3. Record the two connection ids and the time zone as GitHub Environment variables.
 4. Run `set-reminder-recipient.ps1`.
-5. Confirm the owner's licence covers the Dataverse connector in a cloud flow.
+5. After the first deploy, open the flow's Details page and confirm it is not reported as
+   unlicensed. The service principal owns the flow and the Dataverse connector is premium;
+   see research R10 for what to do if it is flagged.
 
 ### `deploy.reusable.yml` (dev)
 
@@ -70,8 +70,8 @@ solution content from publishing the address.
   with `scripts/ci/render-deployment-settings.ps1`.
 - **Import solution**: pass the rendered file as the deployment settings file.
 - After **Publish solution customizations**: run
-  `scripts/deploy/configure-reminder-flow.ps1` to assign the flow to
-  `REMINDER_FLOW_OWNER_ID` and make sure it is turned on.
+  `scripts/deploy/configure-reminder-flow.ps1` to confirm the flow is owned by the service
+  principal and turned on.
 
 ### `promote-prod.yml` (production)
 
@@ -84,9 +84,9 @@ solution content from publishing the address.
 
 | Script | Inputs (environment) | Behaviour |
 |---|---|---|
-| `scripts/ci/render-deployment-settings.ps1` | `PP_CONN_DATAVERSE_ID`, `PP_CONN_OUTLOOK_ID`, `REMINDER_TIME_ZONE` | Writes `solution/deployment-settings.json`. Fails if any input is missing. Prints no values |
+| `scripts/ci/render-deployment-settings.ps1` | `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID`, `REMINDER_TIME_ZONE` | Writes `solution/deployment-settings.json`. Fails if any input is missing. Prints no values |
 | `scripts/ci/assert-no-envvar-values.ps1` | `-Path` or `-Zip` | Exit 1 with the offending file **path** only — never the matched text |
-| `scripts/deploy/configure-reminder-flow.ps1` | `PP_*` service principal credentials, `PP_ENVIRONMENT_URL`, `REMINDER_FLOW_OWNER_ID` | Idempotent. Finds the flow by its unique name, assigns it, turns it on. Fails loudly if the flow is missing or cannot be turned on |
+| `scripts/deploy/configure-reminder-flow.ps1` | `PP_*` service principal credentials, `PP_ENVIRONMENT_URL` | Idempotent. Finds the flow by its unique name, checks the service principal owns it, turns it on if it is off. Changes no ownership. Fails loudly if the flow is missing or cannot be turned on |
 | `scripts/reminder/set-reminder-recipient.ps1` | `-EnvironmentUrl`; interactive prompt | Local use only, with the owner's own sign-in. Never run in CI |
 
 All four follow the repository convention: PowerShell 7, a fresh token per run, no secrets

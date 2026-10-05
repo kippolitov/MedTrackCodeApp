@@ -15,7 +15,7 @@ FR-017, FR-022 to FR-024, FR-026.
 | `lastTaken` | Latest log with status Taken and `ppa_loggedat` not in the future |
 | `lastSkipped` | Latest log with status Skipped and `ppa_loggedat` not in the future |
 | `lastResolved` | The later of `lastTaken` and `lastSkipped` |
-| `anchor` | Local day of `ppa_startdate`, or of `createdon` when no start date is set |
+| `anchor` | The calendar date in `ppa_startdate` exactly as stored (it is a date-only column; never shift it through a time zone), or the local day of `createdon` when no start date is set |
 
 Logs with status Missed are ignored by every rule.
 

@@ -59,8 +59,18 @@ module would make the card disagree with Home.
 
 **Consequence**: Home, the Overdue banner and Adherence change for Biweekly Medications:
 one scheduled Dose per fortnight instead of seven. Adherence percentages for past periods
-containing a Biweekly Medication will rise. This is a behaviour change to existing screens
-and is called out to the owner for confirmation before implementation.
+containing a Biweekly Medication will rise. This is a behaviour change to existing screens.
+
+**Owner direction (2026-10-05)**: fix it. **Done the same day**: `isScheduledOn` added in
+`src/lib/schedule.ts`, `scheduledDosesOnDay` delegates to it, and the now-unused
+`weeksBetween` helper was removed. Three regression tests were added to
+`tests/lib/adherence.test.ts` and seen to fail first.
+
+**Second defect fixed with it**: `ppa_startdate` is a DateOnly column (`"2026-06-01"`), and
+the old code read it with `new Date()`, which treats it as UTC midnight — the previous
+calendar day anywhere west of UTC. The anchor is now built from the date's parts, so it is
+the same calendar day in every time zone. The flow must do the same: use the date text of
+`ppa_startdate` as-is and never convert it through a time zone.
 
 **Alternatives considered**: Leave `adherence.ts` untouched and accept the disagreement —
 rejected, violates FR-016 in spirit and Constitution I (duplicated shared logic).
@@ -125,6 +135,9 @@ after local midnight does the work; later runs that night exit at the idempotenc
   environment variables for configuration).
 - The trigger condition keeps run history to at most four entries a night.
 
+**Owner direction (2026-10-05)**: try the time-zone environment variable in the trigger
+condition first.
+
 **Verify**: that a trigger condition may reference an environment-variable parameter. If it
 may not, drop the condition and make "local hour not 0–3" the first action, ending the run
 as Cancelled. The design is otherwise unchanged.
@@ -159,23 +172,27 @@ without reading an inbox.
 
 ## R7. Which email connector
 
-**Decision**: Office 365 Outlook, action **Send an email (V2)**, through connection
-reference `ppa_MedTrackOutlook`. Secure Inputs and Secure Outputs are switched on for the
-send action so the address does not appear in run history.
+**Decision**: The **Mail** connector, action **Send an email notification (V3)**, through
+connection reference `ppa_MedTrackMail`. Secure Inputs and Secure Outputs are switched on
+for the send action so the address does not appear in run history.
 
-**Rationale**: Standard (non-premium) connector; sends from the owner's own mailbox, which
-gives the best chance of reaching an external inbox; limit of 300 calls per 60 seconds
-against one email a day.
+**Owner direction (2026-10-05)**: use the Mail connector.
 
-**Verify**: that the owner's account in each environment has an Exchange Online mailbox.
-No connections exist yet in the dev environment, so this cannot be confirmed from here.
+**Rationale**:
+- Standard (non-premium) connector that needs no mailbox and no user sign-in, so it has
+  no dependency on the owner's Exchange licence or on a personal OAuth token that can
+  expire. That fits a flow owned by a service principal (R10).
+- Its limit of 100 calls per 24 hours is far above one email a day.
 
-**Fallback**: the **Mail** connector (Send an email notification V3). It needs no mailbox
-and is also standard, but is limited to 100 calls per 24 hours and sends from a Microsoft
-address. Switching is a one-action change plus a different connection reference.
+**Consequences**:
+- The email is sent from a Microsoft service address, not from the owner. The first
+  message may land in junk at the recipient; the owner marks the sender as safe once.
+- Replies go nowhere. The email is a notification only.
 
-**Alternatives considered**: Outlook.com connector (personal account in a work tenant);
-SMTP connector (credentials to manage); Azure Communication Services (new Azure resource).
+**Alternatives considered**: Office 365 Outlook *Send an email (V2)* — sends from the
+owner's own mailbox, but needs an Exchange Online mailbox and a user OAuth connection;
+Outlook.com connector (personal account in a work tenant); SMTP connector (credentials to
+manage); Azure Communication Services (new Azure resource).
 
 ---
 
@@ -248,40 +265,60 @@ gitleaks scans file content. These stay a matter of care, noted in quickstart.md
 - The flow, its two connection references, the two environment variable definitions and
   the new table are authored in the dev environment inside `MedTrackSolution`, then
   unpacked into `solution/src` — the same source of truth the pipeline already packs.
+- **The deployment service principal owns the flow.** It imports the solution, so it
+  becomes the owner, and the pipeline leaves it that way.
 - The owner creates the two connections once per environment and shares each with the
-  deployment service principal ("Can use").
+  service principal ("Can use"). The Dataverse connection stays the owner's own, so the
+  flow reads only the owner's Medications (R11).
 - A committed `solution/deployment-settings.template.json` maps the connection references
   to placeholders. `scripts/ci/render-deployment-settings.ps1` fills them from GitHub
   Environment variables and the import step passes the rendered file. The rendered file is
   git-ignored, mirroring `power.config.template.json`.
-- After import, `scripts/deploy/configure-reminder-flow.ps1` reassigns the flow to the
-  owner and makes sure it is turned on.
+- After import, `scripts/deploy/configure-reminder-flow.ps1` confirms the flow exists, is
+  owned by the service principal and is turned on, turning it on if it is not.
+
+**Owner direction (2026-10-05)**: use the service principal as the flow owner.
 
 **Rationale**:
 - Microsoft documents the deployment settings file as the way to bind connection
   references non-interactively, and requires that the connections be owned by, or shared
   with, the importing identity. OAuth connections can be shared only with a service
   principal user, which is exactly this case.
-- A flow imported by a service principal is owned by it. A service-principal-owned flow
-  that uses a premium connector — the Dataverse connector is one — needs a Process licence
-  or a designated licensed user, or it can be suspended. Reassigning the flow to the owner
-  makes it run under the owner's own licence.
+- Service-principal ownership is Microsoft's recommended pattern for flows deployed by a
+  pipeline: the flow does not depend on one person's account, and no post-import
+  reassignment step is needed.
 
-**Verify**: (a) the owner's licence covers the Dataverse connector in a cloud flow in both
-environments; (b) flow ownership survives the next solution import, in dev (unmanaged) and
-production (managed). If (b) fails, the script simply runs on every deploy, which it is
-written to tolerate. If reassignment proves unworkable, the documented alternative is to
-keep the service principal as owner and set `licensee_systemuserid` to the owner.
+**Consequences**:
+- **Licensing.** A service-principal-owned flow that uses a premium connector needs a
+  Power Automate Process licence or a designated licensed user, or it can be suspended as
+  non-compliant. The Dataverse connector is premium; the Mail connector is not. Choosing
+  the service principal as owner does not remove this requirement.
+- **Failure emails.** Power Automate sends its own failure notifications to the flow
+  owner. With a service principal as owner nobody receives them, so the `ppa_ReminderRun`
+  row (R6) and the flow's run history are the only failure records. A day with no row at
+  all means the flow could not even reach Dataverse.
 
-**Alternatives considered**: Import flows by hand in each environment — bypasses the
-pipeline that spec 003 made the only release path.
+**Verify**: after the first deploy to dev, whether the flow's Details page reports it as
+unlicensed or non-compliant. If it does, in order of preference:
+1. Add the owner as a co-owner and set `licensee_systemuserid` to the owner, so the flow
+   runs under the owner's entitlement while the service principal stays the owner. This
+   needs the owner to hold a licence that covers the Dataverse connector in a flow.
+2. Assign a Power Automate Process licence to the flow.
+
+**Alternatives considered**:
+- *Reassign the flow to the owner after each import* — runs under the owner's licence with
+  no extra step, but ties the flow to a personal account and adds a reassignment on every
+  deploy. Set aside at the owner's direction.
+- *Import flows by hand in each environment* — bypasses the pipeline that spec 003 made
+  the only release path.
 
 ---
 
 ## R11. Whose Medications the flow reads
 
 **Decision**: The flow calls `WhoAmI` through its Dataverse connection and filters
-Medications by `_ownerid_value eq <that user>`.
+Medications by `_ownerid_value eq <that user>`. The Dataverse connection is the owner's
+own, shared with the service principal that owns the flow, so `WhoAmI` returns the owner.
 
 **Rationale**: The reminder is personal and single-recipient (spec Assumptions). If the
 connection's user holds a broad role such as System Administrator, an unfiltered query
@@ -331,8 +368,10 @@ read. A tooltip — unusable on touch screens.
 - Microsoft Learn — Support for service principal owned flows; Assign a user licence to a
   flow owned by a service principal (premium flows need a Process licence or a designated
   licensed user; `licensee_systemuserid`).
-- Microsoft Learn — Troubleshoot common issues with email in flows (Mail connector 100
-  calls per 24 hours; Office 365 Outlook 300 calls per 60 seconds).
+- Microsoft Learn — Troubleshoot common issues with email in flows (Mail connector limit
+  of 100 calls per 24 hours).
+- Microsoft Learn — Power Automate licensing FAQ (failure and licensing behaviour of
+  service-principal-owned flows).
 - This repository — `src/lib/adherence.ts`, `src/hooks/use-intake-logs.ts`,
   `src/generated/models/CommonModels.ts`, `.github/workflows/promote-prod.yml`,
   `.github/workflows/deploy.reusable.yml`, `.gitleaks.toml`.
