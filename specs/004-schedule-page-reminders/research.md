@@ -492,6 +492,23 @@ the real flow could be updated (it waits for the Office 365 Outlook connection, 
 | One follow-up | subject `MedTrack: 1 follow-up` |
 | Rows 2, 4 and 8 days past due, and a row created today | outcome Nothing To Send, no send step |
 
+**Follow-ups on real data (2026-10-05, tasks.md T046)**, in the real flow with the full
+seed, after the Office 365 Outlook connection was bound:
+
+| Scenario | Result |
+|---|---|
+| Full seed | outcome Sent; due S01, S03, S04, S12, S17, S18, S25, S27, S29; follow-ups S06, S08, S09, S13, S21, S23, S26 — `assert-reminder-run.ps1` passes |
+| S06 logged as Taken and S08 switched to Inactive (one re-run for both, to send one test email fewer) | neither is listed; follow-ups S09, S13, S21, S23, S26 |
+| A second run on the same day | the add is rejected (HTTP 412) and the run ends at the guard; no validation, no send |
+
+Not run on real data: an email with follow-ups only. The owner's own Medications in dev
+were due that day and are not test rows to remove, so every real email had a Due section.
+That case is covered by the copy above (`MedTrack: 2 follow-ups`).
+
+Afterwards the seeded rows, the test Reminder Run and the temporary time zone were removed
+and the flow was left **off** in dev. The updated flow was exported into `solution/src` as
+version 1.0.0.3; the export changed only the flow definition.
+
 The copy was deleted afterwards. Because the address is never written into the flow, its
 parameter for `ppa_ReminderRecipientEmail` has an empty default in the definition. Saving
 the flow in the designer may rewrite that default from the environment; if an address ever
