@@ -13,3 +13,39 @@ regexes = [
 paths = [
   '''(.*?)(pnpm|npm|package)-lock\.json''',
 ]
+
+# The reminder address must never reach this public repository (spec 004,
+# FR-028/FR-030). Any email address in committed content is a finding unless it
+# is on the allowlist below. Documentation, tests and seed data use
+# reminder@example.com.
+[[rules]]
+id = "email-address"
+description = "Email address (only example.com / example.org / noreply addresses may be committed)"
+# The domain must end in a letters-only TLD, so version pins such as
+# `pkg@1.2.3` and `actions/checkout@v6` are not matched.
+regex = '''[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}'''
+keywords = ["@"]
+
+  [[rules.allowlists]]
+  description = "Reserved example domains and noreply addresses"
+  regexTarget = "match"
+  regexes = [
+    '''(?i)@example\.(com|org)$''',
+    '''(?i)@users\.noreply\.github\.com$''',
+    '''(?i)^noreply@anthropic\.com$''',
+    # Microsoft's fictitious sample domain, used in the vendored skill docs.
+    '''(?i)@contoso\.com$''',
+  ]
+
+  [[rules.allowlists]]
+  description = "Not email addresses: OData annotations and the git SSH user"
+  regexTarget = "match"
+  regexes = [
+    # `ppa_Medication@odata.bind`, `x@odata.type`, `x@OData.Community.Display.V1.FormattedValue`
+    '''(?i)@odata\.''',
+    # `x@Microsoft.Dynamics.CRM.lookuplogicalname`
+    '''@Microsoft\.''',
+    '''^git@github\.com$''',
+    # The pattern placeholder used in the spec 004 documents.
+    '''^local@domain\.tld$''',
+  ]

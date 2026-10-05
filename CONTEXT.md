@@ -55,3 +55,23 @@ _Avoid_: Due time (that's the concept; Scheduled For is the field name)
 **Reminder Time**:
 A time-of-day stored on a Medication (`ppa_remindertime`, `HH:mm` format). Determines when a Dose becomes Overdue and is copied to Scheduled For when logging.
 _Avoid_: Due time, alarm
+
+**Past Due**:
+A Medication with a Missed Intake from an earlier day, shown on its card. Stays until the intake is logged as Taken or Skipped. Never persisted in Dataverse.
+_Avoid_: Overdue — Overdue is a Dose due today whose Reminder Time has passed
+
+**Next Intake**:
+The date a Medication is next due. For an Injection it rolls forward from the last Taken or Skipped Intake Log; for every other method it follows the fixed schedule.
+_Avoid_: Next dose, due date
+
+**Missed Intake**:
+A due date that ended with no Taken or Skipped Intake Log. Derived from the schedule, never stored. Distinct from the Missed status the user records on an Intake Log.
+_Avoid_: Missed (alone) — that is the Intake Log status
+
+**Follow-up**:
+A reminder on the 1st, 3rd, 5th or 7th day after a Missed Intake. Stops after the 7th day, or as soon as the intake is logged.
+_Avoid_: Nag, repeat reminder
+
+**Reminder Run**:
+One row per day (`ppa_reminderrun`) recording the daily check's outcome: Started, Sent, Nothing To Send or Failed. Also the guard that keeps the check to one email a day.
+_Avoid_: Reminder log, run history (that is Power Automate's own record)
