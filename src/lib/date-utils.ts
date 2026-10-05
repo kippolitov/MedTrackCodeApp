@@ -2,7 +2,6 @@ import {
   startOfDay,
   endOfDay,
   isSameDay,
-  differenceInWeeks,
 } from 'date-fns'
 
 export function startOfLocalDay(d: Date): Date {
@@ -15,10 +14,6 @@ export function endOfLocalDay(d: Date): Date {
 
 export function isSameLocalDay(a: Date, b: Date): boolean {
   return isSameDay(a, b)
-}
-
-export function weeksBetween(start: Date, end: Date): number {
-  return Math.abs(differenceInWeeks(end, start))
 }
 
 // How many years back/forward the calendar lets users jump (research R3).
