@@ -1,0 +1,137 @@
+# Quickstart: Validating Medication Schedule Details & Daily Email Reminder
+
+**Feature**: [spec.md](./spec.md) | **Plan**: [plan.md](./plan.md)
+
+A run guide that proves the feature works end to end. Rules, shapes and step lists are in
+the contracts and data model; this file only says how to exercise them and what to expect.
+
+Every example address in this repository is `reminder@example.com`. Never type the real
+reminder address into a file, a commit message, an issue or a pull request.
+
+## Prerequisites
+
+- Node 22, `npm ci` done.
+- PowerShell 7, `pac` CLI and Azure CLI signed in to the **dev** environment
+  (`pac auth list` shows MedTrackDev as active).
+- For scenarios D to H: the one-time environment setup in
+  [contracts/privacy-and-deployment.contract.md](./contracts/privacy-and-deployment.contract.md)
+  is complete for dev, and the solution containing the flow has been deployed there.
+
+## A. Schedule rules (automated)
+
+```bash
+npm run test -- tests/lib/schedule.test.ts
+```
+
+**Expect**: one passing case per row S01–S33 of
+[contracts/schedule-rules.contract.md](./contracts/schedule-rules.contract.md).
+The existing `tests/lib/adherence.test.ts` still passes, with added cases showing a
+Biweekly Medication is scheduled on one day per fortnight, not seven.
+
+## B. Schedule section on the card (automated)
+
+```bash
+npm run test -- tests/components/medication-schedule.test.tsx tests/hooks/use-medication-schedule.test.tsx tests/pages/medications.test.tsx
+```
+
+**Expect**: every row of the Acceptance mapping in
+[contracts/ui-medication-schedule.contract.md](./contracts/ui-medication-schedule.contract.md)
+passes, including the loading state, the error state with Retry, and the Active switch.
+
+## C. Schedule section in the browser (manual)
+
+```bash
+npm run dev:mock
+```
+
+1. Open the Medications page.
+2. **Expect**: each card ends with a schedule section showing Last taken and Next intake;
+   everything above it looks as it did before.
+3. Check one card of each kind: due today, upcoming, Overdue, As needed, and one in the
+   Inactive section reading "Reminders off".
+4. Switch an Active card to Inactive and back. **Expect**: the row changes without a reload.
+5. Resize to 375 px and to 768 px. **Expect**: no horizontal scrolling; rows wrap cleanly.
+6. Tab through the page. **Expect**: focus order unchanged; nothing in the section traps focus.
+
+## D. Seed the decision table into dev
+
+```powershell
+pwsh scripts/reminder/seed-reminder-scenarios.ps1
+```
+
+**Expect**: 33 Medications named `S01 …` to `S33 …` and their logs, with every date shifted
+so that today plays the part of "5 Oct" in the table. The script is idempotent and removes
+its own rows with `-Remove`.
+
+## E. Daily reminder — full run
+
+1. Delete today's Reminder Run row if one exists (the guard would otherwise stop the run).
+2. In Power Automate, open **MedTrack – Daily Reminder** and choose **Test → Manually**.
+3. Check the result:
+
+```powershell
+pwsh scripts/reminder/assert-reminder-run.ps1 -ExpectDue S01,S03,S04,S12,S17,S18,S25,S27,S29 -ExpectFollowUp S06,S08,S09,S13,S21,S23,S26
+```
+
+**Expect**:
+- The script reports outcome **Sent**, 9 due, 7 follow-ups, and an exact match on names.
+- One email arrives at the configured address with a "Due today" section and a
+  "Follow-ups" section; injection rows carry a "Last taken … · site" line.
+- The send action in run history shows its inputs as hidden.
+
+## F. Daily reminder — guard, quiet day, changes of state
+
+| Step | Expect |
+|---|---|
+| Run the flow a second time on the same day | Run ends at the guard; no second email; Reminder Run unchanged |
+| Log S06 as Taken, delete today's Reminder Run, run again | S06 no longer listed |
+| Switch S08 to Inactive, delete the row, run again | S08 no longer listed |
+| Switch S31 to Active on a Monday, delete the row, run again | S31 listed under Due |
+| `seed-reminder-scenarios.ps1 -Remove`, delete the row, run again (no Medications due) | Outcome **Nothing To Send**; no email |
+
+## G. Daily reminder — failure is visible
+
+1. Clear the value of `ppa_ReminderRecipientEmail` in dev. Do not copy it anywhere first;
+   you will type it again at the script's prompt.
+2. Delete today's Reminder Run and run the flow.
+
+**Expect**: the run shows **Failed** in run history; the Reminder Run row is **Failed**
+with error step `ValidateRecipient`; no email. Then run
+`pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl <dev url>` and run the
+flow again: the same row moves to **Sent** with attempts = 2.
+
+## H. Reminder address privacy
+
+```bash
+npm run lint && npm run build:ci && npm run test
+pwsh scripts/ci/assert-no-envvar-values.ps1 -Path solution/src
+```
+
+**Expect**: all pass.
+
+Then:
+
+1. **Planted address**: on a throwaway branch add a real-looking address (not
+   `example.com`) to any Markdown file and open a pull request. **Expect**: CI fails at the
+   secret scan. Delete the branch.
+2. **Address change**: re-run `set-reminder-recipient.ps1` with a different address.
+   **Expect**: `git status` is clean; within an hour the next run goes to the new address.
+3. **Artifact path**: run **Promote to Production** through to the export job.
+   **Expect**: the zip check passes and the uploaded `managed-solution` artifact, when
+   downloaded and unzipped, contains no `environmentvariablevalues.json` and no address.
+4. **History**: `gitleaks git` over the full history reports no email-address findings.
+
+## I. Unattended overnight check
+
+Leave the flow on for one night with at least one seeded Medication due the next day.
+
+**Expect**: a Reminder Run for the new day with outcome Sent, created within 15 minutes of
+local midnight, and exactly one email. Runs at 01:00–03:00 either do not appear or end at
+the guard.
+
+## Definition of done for this feature
+
+- Sections A, B and H pass in CI.
+- Sections C, E, F, G and I have been run once in dev and once in production (E to G in
+  production use two or three real Medications instead of the seed set).
+- `npm run lint` and `npm run build:ci` pass with zero errors; no new `any`.
