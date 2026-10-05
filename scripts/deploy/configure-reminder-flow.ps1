@@ -10,8 +10,8 @@ was not bound), and a flow that is off sends no reminders without any error
 anywhere -- so this step fails the deploy instead.
 
 Idempotent. Authenticates independently via OAuth client-credentials rather
-than depending on `pac auth create`'s CLI profile (see auth.ps1's ordering
-note). Prints no secrets.
+than depending on a `pac auth create` CLI profile, which was found not to be
+reliably present across steps. Prints no secrets.
 
 Required environment variables:
   PP_CLIENT_ID       Service principal application (client) ID
