@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="ppa_ReminderTimeZone">
+  <defaultvalue>UTC</defaultvalue>
+  <description default="Windows time zone name that defines &quot;today&quot; and &quot;midnight&quot; for the daily reminder.">
+    <label description="Windows time zone name that defines &quot;today&quot; and &quot;midnight&quot; for the daily reminder." languagecode="1033" />
+  </description>
+  <displayname default="Reminder Time Zone">
+    <label description="Reminder Time Zone" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0.0.1</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>

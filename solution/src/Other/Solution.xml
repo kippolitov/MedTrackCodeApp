@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ImportExportXml version="9.2.26054.154" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26054.154" OrganizationSchemaType="Standard" CRMServerServiceabilityVersion="9.2.26054.00154">
+<ImportExportXml version="9.2.26085.172" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26085.172" OrganizationSchemaType="Standard" CRMServerServiceabilityVersion="9.2.26085.00172">
   <SolutionManifest>
     <UniqueName>MedTrackSolution</UniqueName>
     <LocalizedNames>
       <LocalizedName description="MedTrack Solution" languagecode="1033" />
     </LocalizedNames>
     <Descriptions />
-    <Version>1.0.0.1</Version>
+    <Version>1.0.0.2</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>PowerPlatformAdvocates</UniqueName>
@@ -80,6 +80,8 @@
     <RootComponents>
       <RootComponent type="1" schemaName="ppa_intakelog" behavior="0" />
       <RootComponent type="1" schemaName="ppa_medication" behavior="0" />
+      <RootComponent type="1" schemaName="ppa_reminderrun" behavior="0" />
+      <RootComponent type="29" id="{b148b1e4-91c0-f111-aaaf-70a8a59d4f56}" behavior="0" />
       <RootComponent type="9" schemaName="ppa_scheduledday" behavior="0" />
     </RootComponents>
     <MissingDependencies />

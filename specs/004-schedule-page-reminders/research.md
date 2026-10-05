@@ -439,8 +439,30 @@ time-zone workaround in R5:
 | Send the email | **failed, HTTP 401: Mail connector restricted for new tenants (R7)** |
 | Failure path | Reminder Run outcome Failed, error step `SendEmail (401)`, run ended Failed |
 
-T034 stays open until an email can be sent. The flow was turned off again and the seeded
-rows, the test Reminder Run and the temporary time zone were removed.
+The flow was turned off again and the seeded rows, the test Reminder Run and the temporary
+time zone were removed.
+
+**Second real run (2026-10-05), with Office 365 Outlook (R7)**, after the owner created
+that connection. Same seed, same time-zone workaround:
+
+| Step | Result |
+|---|---|
+| Bind the connection, update the flow, turn it on | worked |
+| Due today | the same nine seed rows, plus the owner's own Medications |
+| Send the email | **accepted by the connector** (*Send an email (V2)*, HTTP 200) |
+| Reminder Run | outcome Sent, attempts 1; `assert-reminder-run.ps1` passes |
+| Send step in run history | inputs and outputs are marked secured and cannot be opened; the same holds for `ValidateRecipient` |
+
+What a run cannot show is the message arriving: the owner confirms that in the inbox
+(or junk folder), which is the last open part of T034.
+
+**Export (tasks.md T035)**: the unmanaged export from dev, unpacked into `solution/src`,
+adds exactly the Reminder Run table with its relationships, the flow under `Workflows/`,
+the two environment variable definitions and the two connection references. The test copy
+of the flow was created outside the solution and is not in the export. The exported zip and
+the unpacked folder both pass `assert-no-envvar-values.ps1`: the time-zone value set for
+testing and the recipient value stay out, because both were created without the solution
+header. The folder packs again with `pac solution pack`.
 
 Everything else was run in dev first, in a copy of the flow whose connector steps were
 replaced by stand-in steps fed from `tests/fixtures/schedule-cases.json`:
