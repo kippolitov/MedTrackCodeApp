@@ -155,11 +155,11 @@ Defined in `src/lib/schedule.ts`. They extend, and never copy, the generated Dat
 |---|---|---|
 | `kind` | `ScheduleKind` | Above |
 | `lastTaken` | `{ at: Date; site?: injection-site value } \| null` | Latest Taken log not in the future (FR-003, FR-004) |
-| `nextIntake` | `Date \| null` | Local start-of-day of the next intake; null for `inactive`, `as-needed`, `unscheduled`, and while Overdue on the rolling schedule |
-| `status` | `'due-today' \| 'overdue' \| 'upcoming' \| 'none'` | Drives the visual state (FR-009, FR-010) |
+| `nextIntake` | `Date \| null` | Local start-of-day of the next intake; null for `inactive`, `as-needed`, `unscheduled`, and while Past Due on the rolling schedule |
+| `status` | `'due-today' \| 'past-due' \| 'upcoming' \| 'none'` | Drives the visual state (FR-009, FR-010) |
 | `missedDueDate` | `Date \| null` | The date the missed intake was due (FR-008, FR-009) |
-| `daysOverdue` | `number \| null` | Whole days since `missedDueDate` |
-| `followUpDue` | `boolean` | True when `daysOverdue` is 1, 3, 5 or 7. Not shown in the UI; exists so the module and the flow are tested against the same table (FR-022) |
+| `daysPastDue` | `number \| null` | Whole days since `missedDueDate` |
+| `followUpDue` | `boolean` | True when `daysPastDue` is 1, 3, 5 or 7. Not shown in the UI; exists so the module and the flow are tested against the same table (FR-022) |
 
 ### Inputs to the calculation
 

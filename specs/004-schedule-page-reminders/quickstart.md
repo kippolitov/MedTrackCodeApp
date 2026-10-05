@@ -47,11 +47,27 @@ npm run dev:mock
 1. Open the Medications page.
 2. **Expect**: each card ends with a schedule section showing Last taken and Next intake;
    everything above it looks as it did before.
-3. Check one card of each kind: due today, upcoming, Overdue, As needed, and one in the
+3. Check one card of each kind: due today, upcoming, Past Due, As needed, and one in the
    Inactive section reading "Reminders off".
 4. Switch an Active card to Inactive and back. **Expect**: the row changes without a reload.
 5. Resize to 375 px and to 768 px. **Expect**: no horizontal scrolling; rows wrap cleanly.
 6. Tab through the page. **Expect**: focus order unchanged; nothing in the section traps focus.
+
+### Live query check (once, against dev)
+
+```bash
+npm run dev:live
+```
+
+Pick a Medication with at least three Taken logs on different days.
+
+**Expect**: its card shows the newest of them as last taken; in the browser network panel
+or Power Apps Monitor each of the two schedule queries returns at most one row and only
+the five selected columns. This is the only check that runs the new queries against real
+Dataverse.
+
+Then disconnect the network and reload the page. **Expect**: every card shows "Couldn't
+load schedule." with Retry, and exactly one error toast appears.
 
 ## D. Seed the decision table into dev
 

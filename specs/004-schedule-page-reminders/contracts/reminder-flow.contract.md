@@ -77,7 +77,7 @@ Steps 4 to 9 sit in one scope. Any failure inside it runs **Failure**.
 
 `<name> — <dosage> — <Reminder Time, or "no reminder time">`
 
-**Section "Follow-ups"** — one line per Medication, most overdue first:
+**Section "Follow-ups"** — one line per Medication, longest past due first:
 
 `<name> — <dosage> — was due <date> (<n> day(s) ago)`
 

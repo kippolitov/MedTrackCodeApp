@@ -20,6 +20,7 @@
 - Q: What happens after an intake is missed? → A: Follow-up emails are sent every other day, starting the very next day, and stop after a week — that is, on the 1st, 3rd, 5th, and 7th day after the intake was due.
 - Q: Where is the schedule information shown? → A: Not on a separate page. It is shown at the bottom of each Medication's card on the existing Medications page.
 - Q: What decides whether a Medication gets reminders? → A: Its Active/Inactive status. Active Medications are reminded; Inactive ones are not. There is no separate reminder setting.
+- Q: What is a Medication with a missed intake called on its card? → A: "Past Due". "Overdue" keeps its existing meaning on Home: a Dose due today whose Reminder Time has passed.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -76,7 +77,7 @@ while the weekly pill's does not.
 11. **Given** a Medication whose next intake is today, **When** the user views its card,
     **Then** the schedule section clearly marks it as due today.
 12. **Given** a Medication with a missed intake that was due on 1 October, **When** the user
-    views its card, **Then** the schedule section is marked Overdue and shows that it was
+    views its card, **Then** the schedule section is marked Past Due and shows that it was
     due on 1 October.
 13. **Given** the user logs a Dose as Taken elsewhere in the app, **When** they return to the
     Medications page, **Then** that Medication's last taken and next intake date reflect the
@@ -169,7 +170,7 @@ after the first follow-up, and confirm no further follow-up arrives.
 8. **Given** a Medication with a missed intake is switched to Inactive or is Archived,
    **When** the check runs, **Then** no follow-up is sent for it.
 9. **Given** follow-ups for a missed injection have ended after a week, **When** the user
-   views its card on the Medications page, **Then** it is still marked Overdue.
+   views its card on the Medications page, **Then** it is still marked Past Due.
 
 ---
 
@@ -185,10 +186,10 @@ after the first follow-up, and confirm no further follow-up arrives.
 - **Injection logged as Skipped**: the next intake date moves one interval on from the
   skipped date, so a deliberate skip is not chased with follow-ups.
 - **Injection logged as Missed**: this records the miss but does not move the next intake
-  date; the injection stays Overdue and the follow-up week runs its course unless the
+  date; the injection stays Past Due and the follow-up week runs its course unless the
   injection is Taken or Skipped.
 - **Injection still untaken after the follow-up week**: no further emails are sent for it.
-  Its card stays Overdue, and emails resume only after it is next logged as Taken or
+  Its card stays Past Due, and emails resume only after it is next logged as Taken or
   Skipped, which sets a new next intake date.
 - **Injection taken early**: the next intake date is counted from the early date, so it
   also moves earlier.
@@ -262,9 +263,9 @@ after the first follow-up, and confirm no further follow-up arrives.
   earlier than the Medication's start date (or the date it was added, when no start date is
   set) MUST NOT count.
 - **FR-009**: The schedule section of an Active Medication with a missed intake MUST be
-  marked Overdue and MUST show the date the intake was due, for as long as the intake stays
+  marked Past Due and MUST show the date the intake was due, for as long as the intake stays
   unlogged. A past date MUST NOT be presented as an upcoming intake.
-- **FR-010**: Schedule sections that are Overdue and those due today MUST be visually
+- **FR-010**: Schedule sections that are Past Due and those due today MUST be visually
   distinguished from each other and from those due later, in a way that does not rely on
   colour alone.
 - **FR-011**: The schedule section MUST reflect the current Medications and Intake Logs each

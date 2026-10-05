@@ -28,7 +28,7 @@ Logs with status Missed are ignored by every rule.
 5. Otherwise → **fixed**
 
 Inactive, as-needed and unscheduled Medications have no next intake date, are never
-Overdue, and are never emailed.
+Past Due, and are never emailed.
 
 ## Step 2 — Rolling schedule (Injection)
 
@@ -38,7 +38,7 @@ Overdue, and are never emailed.
 |---|---|---|---|
 | `due > today` | upcoming | `due` | — |
 | `due = today` | due-today | `today` | — |
-| `due < today` | overdue | none shown | `due` |
+| `due < today` | past-due | none shown | `due` |
 
 ## Step 3 — Fixed schedule (everything else)
 
@@ -57,13 +57,13 @@ Then:
 - **Previous due date** is the most recent scheduled date before `today` that is not
   earlier than `anchor`.
 - **Missed** when a previous due date exists and there is no `lastResolved` on or after it.
-- **Status**: due-today wins; otherwise overdue when missed; otherwise upcoming.
+- **Status**: due-today wins; otherwise past-due when missed; otherwise upcoming.
 
 ## Step 4 — Follow-up
 
-`daysOverdue = today − missed due date`, in whole days.
+`daysPastDue = today − missed due date`, in whole days.
 
-A follow-up is owed when status is **overdue** and `daysOverdue` is **1, 3, 5 or 7**.
+A follow-up is owed when status is **past-due** and `daysPastDue` is **1, 3, 5 or 7**.
 No follow-up is owed on any other day, and none after day 7.
 
 A Medication that is due today is listed as due today and never as a follow-up.
@@ -83,16 +83,16 @@ was created on 1 September 2026, and has no Skipped or Missed logs.
 | S03 | Daily pill | none | due-today | 5 Oct | — | Due |
 | S04 | Weekly pill, Monday | Taken 28 Sep | due-today | 5 Oct | — | Due |
 | S05 | Weekly pill, Wednesday | Taken 30 Sep | upcoming | 7 Oct | — | — |
-| S06 | Weekly pill, Sunday | Taken 27 Sep | overdue | 11 Oct | 4 Oct · 1 | Follow-up |
-| S07 | Weekly pill, Saturday | Taken 26 Sep | overdue | 10 Oct | 3 Oct · 2 | — |
-| S08 | Weekly pill, Friday | Taken 25 Sep | overdue | 9 Oct | 2 Oct · 3 | Follow-up |
-| S09 | Weekly pill, Wednesday | Taken 23 Sep | overdue | 7 Oct | 30 Sep · 5 | Follow-up |
+| S06 | Weekly pill, Sunday | Taken 27 Sep | past-due | 11 Oct | 4 Oct · 1 | Follow-up |
+| S07 | Weekly pill, Saturday | Taken 26 Sep | past-due | 10 Oct | 3 Oct · 2 | — |
+| S08 | Weekly pill, Friday | Taken 25 Sep | past-due | 9 Oct | 2 Oct · 3 | Follow-up |
+| S09 | Weekly pill, Wednesday | Taken 23 Sep | past-due | 7 Oct | 30 Sep · 5 | Follow-up |
 | S10 | Weekly pill, Wednesday | Taken Fri 2 Oct (late) | upcoming | 7 Oct | — | — |
 | S11 | Weekly pill, Sunday | Taken 27 Sep, Skipped 4 Oct | upcoming | 11 Oct | — | — |
 | S12 | Biweekly pill, Monday, start 21 Sep | Taken 21 Sep | due-today | 5 Oct | — | Due |
-| S13 | Biweekly pill, Monday, start 28 Sep | none | overdue | 12 Oct | 28 Sep · 7 | Follow-up |
-| S14 | Biweekly pill, Sunday, start 27 Sep | none | overdue | 11 Oct | 27 Sep · 8 | — |
-| S15 | Biweekly pill, Thursday, start 28 Sep | none | overdue | 15 Oct | 1 Oct · 4 | — |
+| S13 | Biweekly pill, Monday, start 28 Sep | none | past-due | 12 Oct | 28 Sep · 7 | Follow-up |
+| S14 | Biweekly pill, Sunday, start 27 Sep | none | past-due | 11 Oct | 27 Sep · 8 | — |
+| S15 | Biweekly pill, Thursday, start 28 Sep | none | past-due | 15 Oct | 1 Oct · 4 | — |
 | S16 | Weekly pill, Sunday, created 5 Oct | none | upcoming | 11 Oct | — | — |
 | S17 | Daily pill | Taken 4 Oct, Taken 6 Oct (future-dated) | due-today | 5 Oct | — | Due |
 
@@ -103,12 +103,12 @@ was created on 1 September 2026, and has no Skipped or Missed logs.
 | S18 | Weekly injection | Taken 28 Sep | due-today | 5 Oct | — | Due |
 | S19 | Weekly injection | Taken Fri 2 Oct | upcoming | 9 Oct | — | — |
 | S20 | Weekly injection | Taken Sat 3 Oct (early) | upcoming | 10 Oct | — | — |
-| S21 | Biweekly injection | Taken 20 Sep | overdue | none | 4 Oct · 1 | Follow-up |
-| S22 | Weekly injection | Taken 26 Sep | overdue | none | 3 Oct · 2 | — |
-| S23 | Weekly injection | Taken 21 Sep | overdue | none | 28 Sep · 7 | Follow-up |
-| S24 | Weekly injection | Taken 20 Sep | overdue | none | 27 Sep · 8 | — |
+| S21 | Biweekly injection | Taken 20 Sep | past-due | none | 4 Oct · 1 | Follow-up |
+| S22 | Weekly injection | Taken 26 Sep | past-due | none | 3 Oct · 2 | — |
+| S23 | Weekly injection | Taken 21 Sep | past-due | none | 28 Sep · 7 | Follow-up |
+| S24 | Weekly injection | Taken 20 Sep | past-due | none | 27 Sep · 8 | — |
 | S25 | Weekly injection | Taken 14 Sep, Skipped 28 Sep | due-today | 5 Oct | — | Due |
-| S26 | Weekly injection | Taken 21 Sep, Missed 28 Sep | overdue | none | 28 Sep · 7 | Follow-up |
+| S26 | Weekly injection | Taken 21 Sep, Missed 28 Sep | past-due | none | 28 Sep · 7 | Follow-up |
 | S27 | Daily injection | Taken 4 Oct | due-today | 5 Oct | — | Due |
 | S28 | Biweekly injection | Taken 1 Oct | upcoming | 15 Oct | — | — |
 
@@ -135,7 +135,7 @@ show the Taken log, not the Skipped one; S17 shows 4 Oct), or "Not yet taken".
 
 - `tests/fixtures/schedule-cases.json` contains one case per row, keyed by the row number,
   with every date and weekday stored as an offset from "today" so it works on any day.
-  `tests/lib/schedule.test.ts` asserts status, next intake, missed due date, days overdue
+  `tests/lib/schedule.test.ts` asserts status, next intake, missed due date, days past due
   and follow-up for every case.
 - `scripts/reminder/seed-reminder-scenarios.ps1` reads that same file and creates the rows
   in the dev environment, resolving the offsets against the day the script is run, and

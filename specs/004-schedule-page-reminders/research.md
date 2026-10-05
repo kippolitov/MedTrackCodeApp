@@ -101,13 +101,18 @@ Reminder Time and is not user-editable.
 and return arrays.
 
 **Rationale**:
-- "Last taken" can be arbitrarily old (an Overdue injection last taken months ago), so a
+- "Last taken" can be arbitrarily old (a Past Due injection last taken months ago), so a
   date-bounded list query would report "Not yet taken" falsely.
 - `IGetAllOptions` supports `orderBy` and `top`, so no hand-written OData is needed.
 - Keys under `['intakelogs']` mean the existing create/update/delete mutations already
   invalidate these queries (FR-011). `useUpdateIntakeLog` patches cached data with
   `old?.map(…)`, so the cached value must be an array.
 - Cards render immediately; only the schedule section waits (FR-012, SC-004).
+
+**Verify**: that the Code Apps data service honours `orderBy` and `top` against real
+Dataverse. The Vitest suite stubs the generated service, so it cannot show this; tasks.md
+T020 checks it live in dev. Fallback: sort and take the first row client-side over a
+bounded page.
 
 **Alternatives considered**:
 - *One unbounded query for all Taken/Skipped logs* — grows without limit; violates

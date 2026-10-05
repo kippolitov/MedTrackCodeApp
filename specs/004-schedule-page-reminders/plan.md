@@ -40,7 +40,8 @@ Adds table `ppa_ReminderRun`, environment variable definitions
 `ppa_MedTrackDataverse` and `ppa_MedTrackMail`. See [data-model.md](./data-model.md).
 
 **Testing**: Vitest + Testing Library with `vi.mock` of the generated services (existing
-pattern) for the module, hook, component and page. The flow is verified by seeding the
+pattern) for the module, hook, component and page, plus one live check of the two new
+queries against the dev environment. The flow is verified by seeding the
 decision table into dev and asserting on the `ppa_ReminderRun` row. See
 [quickstart.md](./quickstart.md).
 
@@ -79,8 +80,8 @@ Dataverse connector.
 | Principle | Applicability & Compliance |
 |---|---|
 | **I. Code Quality & Type Safety** | New code is strict TypeScript with no `any`. `ScheduleDetails` extends the generated `Ppa_medications` / `Ppa_intakelogs` types rather than copying them. Shared logic lives in `src/lib/schedule.ts` and `src/hooks/use-medication-schedule.ts`; `scheduledDosesOnDay` is changed to call the new `isScheduledOn` so the fixed schedule has one definition. Remote state goes through TanStack Query only. **One deviation**: the schedule rule exists twice, in TypeScript and in the cloud flow. Recorded in Complexity Tracking. **PASS with justified deviation** |
-| **II. Testing Standards** | Each user story has an independently runnable acceptance test: US1 by Vitest page and component tests; US2 and US3 by the seeded decision table plus `assert-reminder-run.ps1`. The two new Dataverse queries are tested through the generated service functions with the existing `vi.mock` stub pattern. Tests are written first and seen to fail (fixtures before `schedule.ts`; component tests before the component). Test files mirror `src/`. **PASS** |
-| **III. User Experience Consistency** | The schedule section uses `Badge`, `Skeleton`, `Separator`, `Button` and Lucide icons only, with existing design tokens. Verified at 375 px and 768 px. State is conveyed by icon and text as well as colour; Retry meets the 44 px target. No destructive actions are added. Loading and error are shown in place on each card rather than as a toast: a toast per card would stack N messages for one outage and would not say which card failed. The constitution's toast rule is read as covering feedback for user-initiated operations, which this section does not have. **PASS** |
+| **II. Testing Standards** | Each user story has an independently runnable acceptance test: US1 by Vitest page and component tests; US2 and US3 by the seeded decision table plus `assert-reminder-run.ps1`. The two new Dataverse queries are covered twice: their shape (select, filter, order, row limit, cache keys) by Vitest with the repository's existing `vi.mock` pattern, and their behaviour against the real dev Dataverse endpoint by a live check (tasks.md T020), since a mocked service cannot show whether `orderBy` and `top` are honoured. Tests are written first and seen to fail (fixtures before `schedule.ts`; component tests before the component). Test files mirror `src/`. **PASS** |
+| **III. User Experience Consistency** | The schedule section uses `Badge`, `Skeleton`, `Separator`, `Button` and Lucide icons only, with existing design tokens. Verified at 375 px and 768 px. State is conveyed by icon and text as well as colour; Retry meets the 44 px target. No destructive actions are added. Loading is shown in place with `Skeleton` rows, as on Home and Analytics. A failed load shows an in-card message with Retry **and** raises one Sonner error toast with a fixed id, so several failing cards produce a single toast. **PASS** |
 | **IV. Performance Requirements** | Both new queries specify `select` (five columns), a filter and `top: 1`. `staleTime` is 30 s. Cards render before intake history arrives. No new route, no chart, no new dependency; bundle growth is a few KB. **PASS** |
 | **Tech Stack Standards** | No new app-layer technology. Dates use date-fns and the existing `Intl` helpers. The cloud flow, table, environment variables and connection references are Dataverse solution components deployed by the existing `pac`-based pipeline. **PASS** |
 | **Workflow & Quality Gates** | Follows specify → plan → tasks → implement. Delivery is by story: US1 is a working increment with no flow; US2 adds the flow; US3 adds follow-ups. Lint, build and tests gate every pull request, with two added checks for the reminder address. **PASS** |
@@ -101,7 +102,7 @@ clock (Principle I, predictability).
 | Consult design rules before designing tables | Done; permanent choices are listed in data-model.md §2 |
 | Define a security model | data-model.md §7 |
 | No placeholder columns, no rollup fields | Every `ppa_ReminderRun` column is written by the flow; counts are computed in the flow |
-| Never silently swallow errors | Card shows an error with Retry; flow records Failed and ends the run as Failed |
+| Never silently swallow errors | Card shows an error with Retry, raises an error toast and logs with `console.error`; flow records Failed and ends the run as Failed |
 | PowerShell for Dataverse API calls | All seven scripts are `.ps1` |
 | No parallel table creation | One table |
 | Homepage strategy, forms, plug-ins, PCF | Not applicable — no model-driven app, form, plug-in or control is added |

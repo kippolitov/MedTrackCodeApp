@@ -35,8 +35,8 @@ This row is shown for every Medication, including Inactive and As-Needed ones.
 |---|---|---|
 | upcoming | `<date>` — for example "Wed, Oct 7" | none |
 | due-today | `<date>` | Badge "Due today" with a calendar-check icon |
-| overdue, fixed schedule | `<next scheduled date>` | Destructive badge "Overdue · was due `<date>`" with a warning icon |
-| overdue, rolling schedule | no date | Destructive badge "Overdue · was due `<date>`" with a warning icon |
+| past-due, fixed schedule | `<next scheduled date>` | Destructive badge "Past Due · was due `<date>`" with a warning icon |
+| past-due, rolling schedule | no date | Destructive badge "Past Due · was due `<date>`" with a warning icon |
 | as-needed | "As needed" | none |
 | unscheduled | "Not scheduled" | none |
 | inactive | "Reminders off" with a bell-off icon | none |
@@ -58,10 +58,12 @@ For a rolling-schedule Medication the row also carries the hint "Counted from la
 | Medications loading | existing behaviour | not rendered |
 | Intake history loading | fully rendered | two `Skeleton` rows, `aria-busy="true"` |
 | Loaded | fully rendered | rows above |
-| Intake history failed | fully rendered | "Couldn't load schedule." and a "Retry" `Button`. Never "Not yet taken" |
+| Intake history failed | fully rendered | "Couldn't load schedule." and a "Retry" `Button`. Never "Not yet taken". Also one Sonner error toast, "Couldn't load schedule for some medications.", with the fixed id `schedule-load-error` |
 | No Medications | existing empty state | — |
 
 Retry re-runs only that card's failed queries. A failure on one card does not affect others.
+The toast uses one fixed id, so any number of failing cards shows a single toast; the
+in-card message is what tells the user which Medication is affected.
 
 ## Behaviour
 
@@ -101,5 +103,6 @@ Both return arrays (zero or one item) and use `staleTime` 30 s.
 | 5, 6, 7 (rolling vs fixed dates) | `tests/lib/schedule.test.ts` rows S10, S19, S28 |
 | 10 (switch to Active) | `tests/pages/medications.test.tsx` |
 | 13 (reflects a new log) | `tests/hooks/use-medication-schedule.test.tsx` |
-| Loading and error states | `tests/components/medication-schedule.test.tsx` |
+| Loading and error states, single error toast | `tests/components/medication-schedule.test.tsx` |
+| Queries honoured by real Dataverse (`orderBy`, `top`, `select`) | live check in quickstart.md section C |
 | 375 px and 768 px | manual check in quickstart.md |
