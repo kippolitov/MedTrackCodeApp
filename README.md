@@ -103,7 +103,7 @@ Nothing due and nothing missed means no email. Switching a Medication to Inactiv
 
 ### One-time setup per environment
 
-1. Create a **Microsoft Dataverse** connection, signed in as the person whose Medications are tracked, and a **Mail** connection. Share each with the deployment service principal as "Can use".
+1. Create a **Microsoft Dataverse** connection and an **Office 365 Outlook** connection, both signed in as the person whose Medications are tracked. That account needs an Exchange Online mailbox; the reminder is sent from it. Share each connection with the deployment service principal as "Can use".
 2. On the GitHub Environment (`dev`, `production`), set the variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` and `REMINDER_TIME_ZONE` (a Windows time zone name such as `Eastern Standard Time`).
 3. Deploy. The first deploy to a new environment brings in the flow and the environment variables, then stops at "Configure reminder flow": the flow cannot be turned on until it has an address to read.
 4. Set the reminder address:
@@ -126,7 +126,7 @@ This repository is public, so the address is never written in it — not in a fi
 ### Good to know
 
 - **A changed address can take up to an hour to apply.** The next run may still use the old one.
-- **The first email may land in junk.** The Mail connector sends from a Microsoft service address, not from you. Mark the sender as safe once. Replies go nowhere.
+- **The first email may land in junk.** The reminder is sent from the mailbox behind the Office 365 Outlook connection. Mark the sender as safe once, or add it to your contacts. A copy of each reminder stays in that mailbox's Sent Items.
 - **A failed check does not email anyone.** Power Automate sends failure notices to the flow's owner, and the owner is a service principal. The record of each day is a row in the **Reminder Run** table (`ppa_reminderrun`) — outcome Sent, Nothing To Send or Failed, with the step that failed — and the flow's run history. A day with no row at all means the flow could not reach Dataverse.
 - **At most one email a day.** A second run on the same day stops at the Reminder Run row. A failed run is retried on the hour until 03:00 local time.
 

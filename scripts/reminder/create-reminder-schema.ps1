@@ -290,16 +290,31 @@ $connectionReferences = @(
     @{
         connectionreferencelogicalname = 'ppa_MedTrackMail'
         connectionreferencedisplayname = 'MedTrack Mail'
-        description                    = 'Mail connection used to send the daily reminder.'
-        connectorid                    = '/providers/Microsoft.PowerApps/apis/shared_sendmail'
+        description                    = 'Office 365 Outlook connection used to send the daily reminder.'
+        connectorid                    = '/providers/Microsoft.PowerApps/apis/shared_office365'
     }
 )
 
 foreach ($reference in $connectionReferences) {
     $name     = $reference.connectionreferencelogicalname
-    $existing = Get-DVOrNull ("$apiBase/connectionreferences?" + '$select=connectionreferenceid&$filter=' + "connectionreferencelogicalname eq '$name'")
+    $existing = Get-DVOrNull ("$apiBase/connectionreferences?" + '$select=connectionreferenceid,connectorid&$filter=' + "connectionreferencelogicalname eq '$name'")
     if ($existing.value.Count -gt 0) {
-        Write-Host "  = connection reference $name already exists"
+        $current = $existing.value[0]
+        if ($current.connectorid -eq $reference.connectorid) {
+            Write-Host "  = connection reference $name already exists"
+            continue
+        }
+        # Created for another connector (the Mail connector, before it was replaced).
+        # The old connection stays attached until the owner picks a new one.
+        try {
+            Invoke-RestMethod -Method Patch -Uri "$apiBase/connectionreferences($($current.connectionreferenceid))" -Headers $writeHeaders -Body (@{
+                connectorid = $reference.connectorid
+                description = $reference.description
+            } | ConvertTo-Json -Compress) | Out-Null
+        } catch {
+            throw "Could not move connection reference $name to $($reference.connectorid): $(Get-DVErrorReason $_)"
+        }
+        Write-Host "  ✓ connection reference $name moved to $($reference.connectorid) — pick a connection for it"
         continue
     }
     New-DV -Uri "$apiBase/connectionreferences" -What "connection reference $name" -Body $reference

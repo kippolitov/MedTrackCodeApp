@@ -124,8 +124,8 @@ enforces this (research R9).
 
 | Schema name | Connector | Used for |
 |---|---|---|
-| `ppa_MedTrackDataverse` | Microsoft Dataverse (`shared_commondataserviceforapps`) | WhoAmI, list Medications and Intake Logs, create/update Reminder Run |
-| `ppa_MedTrackMail` | Mail (`shared_sendmail`) | Send the reminder email |
+| `ppa_MedTrackDataverse` | Microsoft Dataverse (`shared_commondataserviceforapps`) | List Medications and Intake Logs, create/update Reminder Run |
+| `ppa_MedTrackMail` | Office 365 Outlook (`shared_office365`) | Send the reminder email from the owner's mailbox |
 
 Connections are created by the owner in each environment and are never source-controlled.
 Their ids reach the import step through GitHub Environment variables (see

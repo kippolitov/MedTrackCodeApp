@@ -31,7 +31,7 @@ validation scripts, per repository convention.
 
 **Primary Dependencies**: Unchanged app stack — TanStack Query 5, shadcn/ui on Radix,
 Tailwind 4, date-fns 4, Lucide, PAC-generated Dataverse services (`src/generated/`).
-Platform: Microsoft Dataverse connector, Mail connector, `pac` CLI,
+Platform: Microsoft Dataverse connector, Office 365 Outlook connector, `pac` CLI,
 `microsoft/powerplatform-actions`, gitleaks. **No new npm dependencies.**
 
 **Storage**: Dataverse. Reads `ppa_medication` and `ppa_intakelog` (no schema change).
@@ -67,7 +67,8 @@ intake-log queries use `staleTime` ≤ 30 s. Cross-platform: every script is `.p
 
 **Unknowns**: None block planning. The owner settled the three open choices on
 2026-10-05: try the time-zone environment variable in the trigger condition (research R5),
-use the Mail connector (R7), and keep the deployment service principal as the flow owner
+use the Mail connector (R7; replaced by Office 365 Outlook the same day, when the Mail
+connector turned out to be blocked in this tenant), and keep the deployment service principal as the flow owner
 (R10). Two points still need a check in dev, each with a stated fallback: whether the
 trigger condition can read the environment variable, and whether the
 service-principal-owned flow is reported as unlicensed because it uses the premium
@@ -219,7 +220,7 @@ The owner confirmed the fix and it is already implemented on this branch.
 | Service-principal-owned flow is flagged as unlicensed (premium Dataverse connector) | Medium | Flow suspended; no emails | Check the flow's Details page in increment 2; designate the owner as licensed user, or assign a Process licence (research R10) |
 | Flow is left turned off after import | Low | No emails | `configure-reminder-flow.ps1` fails the deploy if the flow is not on |
 | Nobody receives Power Automate's failure emails (owner is a service principal) | Certain | A failed check is noticed only if the owner looks | `ppa_ReminderRun` records every outcome; a missing row for a day is itself the signal; noted in README |
-| Email lands in junk at the recipient (sent from a Microsoft service address) | Medium | Reminder not seen | Check on first run; owner marks sender as safe; noted in README |
+| Email lands in junk at the recipient (sent from a new tenant's mailbox) | Medium | Reminder not seen | Check on first run; owner marks sender as safe; noted in README |
 | Changed address takes up to an hour to apply | Certain | Next run may use the old address | Documented in quickstart.md and README |
 
 ## Complexity Tracking

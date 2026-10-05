@@ -56,7 +56,8 @@ solution content from publishing the address.
 
 ### One-time setup per environment (owner)
 
-1. Create a Microsoft Dataverse connection (signed in as the owner) and a Mail connection.
+1. Create a Microsoft Dataverse connection and an Office 365 Outlook connection, both
+   signed in as the owner.
 2. Share each with the deployment service principal, permission "Can use".
 3. Record the two connection ids and the time zone as GitHub Environment variables.
 4. Run `set-reminder-recipient.ps1`.

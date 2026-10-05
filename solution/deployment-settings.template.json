@@ -14,7 +14,7 @@
     {
       "LogicalName": "ppa_MedTrackMail",
       "ConnectionId": "__CONN_MAIL_ID__",
-      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_sendmail"
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_office365"
     }
   ]
 }

@@ -51,8 +51,8 @@ Normal night: the 00:00 run does the work and the 01:00–03:00 runs stop at ste
    3. Due today → add to the **due** list. Follow-up owed → add to the **follow-up** list.
       Otherwise nothing.
 7. **Nothing listed** → update the row: outcome Nothing To Send, both counts 0. End.
-8. **Send one email** (see below) with the Mail connector's *Send an email notification
-   (V3)* action, Secure Inputs and Secure Outputs on.
+8. **Send one email** (see below) with the Office 365 Outlook connector's *Send an email
+   (V2)* action, Secure Inputs and Secure Outputs on.
 9. **Record success.** Update the row: outcome Sent, both counts, `ppa_Summary`.
 
 Steps 4 to 9 sit in one scope. Any failure inside it runs **Failure**.
@@ -71,7 +71,7 @@ Steps 4 to 9 sit in one scope. Any failure inside it runs **Failure**.
 
 | Part | Content |
 |---|---|
-| From | a Microsoft service address (the Mail connector does not send as the owner) |
+| From | the mailbox of the account that signed in to the Office 365 Outlook connection (the owner) |
 | To | value of `ppa_ReminderRecipientEmail` |
 | Subject | `MedTrack: <n> due today` · `MedTrack: <n> due today, <m> follow-up(s)` · `MedTrack: <m> follow-up(s)` |
 | Body | HTML, two sections, each omitted when empty |

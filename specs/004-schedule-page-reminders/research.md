@@ -216,45 +216,66 @@ without reading an inbox.
 
 ## R7. Which email connector
 
-**Decision**: The **Mail** connector, action **Send an email notification (V3)**, through
-connection reference `ppa_MedTrackMail`. Secure Inputs and Secure Outputs are switched on
-for the send action so the address does not appear in run history.
-
-**Owner direction (2026-10-05)**: use the Mail connector.
+**Decision (changed 2026-10-05)**: The **Office 365 Outlook** connector, action **Send an
+email (V2)**, through connection reference `ppa_MedTrackMail`. Secure Inputs and Secure
+Outputs are switched on for the send action so the address does not appear in run history.
 
 **Rationale**:
-- Standard (non-premium) connector that needs no mailbox and no user sign-in, so it has
-  no dependency on the owner's Exchange licence or on a personal OAuth token that can
-  expire. That fits a flow owned by a service principal (R10).
-- Its limit of 100 calls per 24 hours is far above one email a day.
+- It works in this tenant today. The owner's account holds a Developer E5 licence with an
+  Exchange Online mailbox, which is all the connector needs.
+- Standard (non-premium) connector, no new account and no stored secret.
+- Its limit (300 calls per 60 seconds per connection) is far above one email a day.
+- The recipient's mail provider does not matter: the connector delivers to any address.
 
 **Consequences**:
-- The email is sent from a Microsoft service address, not from the owner. The first
-  message may land in junk at the recipient; the owner marks the sender as safe once.
-- Replies go nowhere. The email is a notification only.
+- The email is sent **from the mailbox of the account that signed in to the connection**
+  (the owner). That address is visible to the recipient and, like the reminder address, is
+  never written in this repository.
+- A copy of every reminder is kept in that mailbox's Sent Items, with the recipient
+  address on it. That is the owner's own mailbox, outside the repository and outside
+  Dataverse.
+- The connection is an OAuth sign-in by a person. If the sign-in stops being valid (for
+  example after a password change), the send step fails; the Reminder Run row then shows
+  outcome Failed with the send step, and the owner repairs the connection.
+- The first message from a new tenant's address may land in junk at the recipient; the
+  owner marks the sender as safe once.
 
-**Blocked in this tenant (found 2026-10-05, first real run, tasks.md T034)**: the send
-step failed with HTTP 401 and this message from the connector:
+**First decision, and why it was dropped**: the owner's direction on 2026-10-05 was the
+**Mail** connector, *Send an email notification (V3)*: no mailbox, no user sign-in, and a
+limit of 100 calls per 24 hours. On the first real run (tasks.md T034) its send step failed
+with HTTP 401 and this message from the connector:
 
 > The Mail connector is currently restricted for new tenants. Microsoft is working on
 > enabling this connector. In the meantime, please consider using alternatives like
 > Office 365 Outlook, Gmail, SendGrid connector instead.
 
+No tenant or admin setting for this restriction was found in Microsoft's documentation.
 The rest of that run was correct, and the failure was recorded as designed: Reminder Run
-outcome Failed, error step `SendEmail (401)`. The Mail connector cannot be used here until
-Microsoft lifts the restriction, so this decision is open again. The owner's tenant account
-holds a Developer E5 licence with an Exchange Online mailbox, which makes Office 365 Outlook
-*Send an email (V2)* usable; it sends from that mailbox.
+outcome Failed, error step `SendEmail (401)`. The owner chose Office 365 Outlook the same
+day.
 
-One more observation from the failed send: Secure Inputs hid the step's inputs, but the
-connector's **error response stayed readable** in run history even with Secure Outputs on.
-That response held no address this time. It is the reason the flow stores only the step
+**Moving the connection reference**: `ppa_MedTrackMail` keeps its name. Its `connectorid`
+can be changed in place with a PATCH (`create-reminder-schema.ps1` does this when it finds
+the old connector). Two things were observed in dev: the platform ignores an attempt to
+clear `connectionid`, so the old connection stays attached until a new one is picked; and
+a flow definition that uses the reference **cannot be saved, even switched off**, until the
+reference points to a valid connection of the new connector
+(`ConnectionAuthorizationFailed`). The order is therefore: create the connection, bind the
+reference, then update the flow.
+
+**Alternatives considered**:
+- *Outlook.com* — sends from a personal Microsoft account; fine, but one more account.
+- *SMTP* — could send from the recipient's own provider, but stores a mail password in the
+  connection.
+- *SendGrid* — account, API key and a verified sender for one email a day.
+- *Gmail* — with a consumer Gmail account, Google allows it only alongside an approved list
+  of connectors.
+- *Azure Communication Services* — a new Azure resource to own.
+
+One more observation from the failed Mail send: Secure Inputs hid the step's inputs, but
+the connector's **error response stayed readable** in run history even with Secure Outputs
+on. That response held no address this time. It is the reason the flow stores only the step
 name and status code, never the error text (R9).
-
-**Alternatives considered**: Office 365 Outlook *Send an email (V2)* — sends from the
-owner's own mailbox, but needs an Exchange Online mailbox and a user OAuth connection;
-Outlook.com connector (personal account in a work tenant); SMTP connector (credentials to
-manage); Azure Communication Services (new Azure resource).
 
 ---
 
@@ -377,7 +398,7 @@ gitleaks scans file content. These stay a matter of care, noted in quickstart.md
 **Consequences**:
 - **Licensing.** A service-principal-owned flow that uses a premium connector needs a
   Power Automate Process licence or a designated licensed user, or it can be suspended as
-  non-compliant. The Dataverse connector is premium; the Mail connector is not. Choosing
+  non-compliant. The Dataverse connector is premium; the email connector is not. Choosing
   the service principal as owner does not remove this requirement.
 - **Failure emails.** Power Automate sends its own failure notifications to the flow
   owner. With a service principal as owner nobody receives them, so the `ppa_ReminderRun`
@@ -510,7 +531,7 @@ read. A tooltip — unusable on touch screens.
   flow owned by a service principal (premium flows need a Process licence or a designated
   licensed user; `licensee_systemuserid`).
 - Microsoft Learn — Troubleshoot common issues with email in flows (Mail connector limit
-  of 100 calls per 24 hours).
+  of 100 calls per 24 hours; Office 365 Outlook 300 calls per 60 seconds).
 - Microsoft Learn — Power Automate licensing FAQ (failure and licensing behaviour of
   service-principal-owned flows).
 - This repository — `src/lib/adherence.ts`, `src/hooks/use-intake-logs.ts`,
