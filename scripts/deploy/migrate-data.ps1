@@ -11,8 +11,8 @@ against v2.7.4 — the only related tool is `pac tool CMT`, a Windows GUI
 executable that cannot run headlessly on a GitHub-hosted Linux runner).
 This script replaces that non-existent step with a small, self-contained
 Web API upsert. It authenticates independently via OAuth client-credentials
-rather than depending on `pac auth create`'s CLI profile, since that profile
-is not reliably present across steps (see auth.ps1's ordering note).
+rather than depending on a `pac auth create` CLI profile, which was found not
+to be reliably present across steps.
 
 Medications upsert by the `ppa_name` alternate key. Intake logs upsert by
 the composite `ppa_scheduledfor` + medication-lookup alternate key; because

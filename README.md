@@ -82,6 +82,15 @@ Manual promotion
                             No code reaches production without a human sign-off.
 ```
 
+The app is published by the deployment service principal with the Power Apps CLI (`pa app push --non-interactive`), the path Microsoft documents for service principals. One-time setup per environment: the app's owner shares the app with that environment's service principal, with edit access. From a folder whose `power.config.json` points at that environment's app:
+
+```bash
+npx pa auth login
+npx pa app share --principal <enterprise-application-object-id> --access edit
+```
+
+Use the object ID shown under **Enterprise applications** in Microsoft Entra, not the one under App registrations.
+
 ### Security posture
 
 - **[Gitleaks](https://github.com/gitleaks/gitleaks)** runs on every PR — any committed secret blocks the merge

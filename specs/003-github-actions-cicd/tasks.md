@@ -303,3 +303,26 @@ Task: "Add alternate key to ppa_intakelog in solution/src/"
 ### Sequencing Note
 
 Unlike a typical feature where same-priority stories (US2, US4) are fully parallel, here US4 is deliberately sequenced **before** US2: US2's deploy workflow reads Power Platform identifiers via the externalized-config mechanism (`power.config.template.json` + `render-power-config.ps1`) that US4 introduces, so building US2 first would mean writing it against a config pattern that gets replaced immediately after.
+
+---
+
+## Follow-up (2026-10-05): the app is published with the Power Apps CLI, as Microsoft now documents
+
+microsoft/PowerAppsCodeApps#394 was closed on 2026-08-19 with official guidance
+([Publish Power Apps code apps with a service principal](https://learn.microsoft.com/power-apps/developer/code-apps/how-to/use-service-principal)):
+
+- a service principal needs **edit access to the app itself**; environment-level roles are not enough;
+- the app's owner grants that once, with `pa app share --principal <enterprise-application-object-id> --access edit`;
+- updates are then published with `pa app push --non-interactive`, signed in through the `PA_CLI_USE_SP_AUTH`, `PA_CLI_SP_CLIENT_ID`, `PA_CLI_SP_CLIENT_SECRET` and `PA_CLI_SP_TENANT_ID` environment variables;
+- the npm-based CLI must be used for this, **not the PAC CLI**.
+
+What changed here:
+
+- `scripts/deploy/deploy-app.ps1` runs `pa app push --non-interactive` from `@microsoft/power-apps-cli`, pinned at 1.2.0 as a dev dependency so `npm ci` installs it with a locked integrity hash. It replaces `pac --log-to-console code push --solutionName MedTrackSolution`, the workaround from the section above.
+- `deploy.reusable.yml` and `promote-prod.yml`: the "Authenticate to Power Platform" step (`pac auth create`) is removed, and the three service principal secrets are passed to "Deploy Code App" instead.
+- `scripts/deploy/auth.ps1` is deleted: nothing else used the `pac auth` profile. The `PAC_CLI_SPN_SECRET` workaround it carried is no longer needed.
+- The local `build` script (`pac code push` under the developer's own sign-in) is unchanged.
+
+**Prerequisite before the next deploy** (checked 2026-10-05: neither service principal has a permission on its environment's app yet, only the owner does): the owner shares the dev app with the dev service principal and the production app with the production one, each with edit access.
+
+**Not yet verified**: a pipeline run with the new step. The runner stays `windows-latest`; the reason it was chosen (the `pac auth` profile on Linux) no longer applies, but a Linux runner has not been tried with the new CLI.
