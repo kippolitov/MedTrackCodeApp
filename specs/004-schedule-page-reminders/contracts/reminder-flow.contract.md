@@ -30,7 +30,9 @@ Normal night: the 00:00 run does the work and the 01:00–03:00 runs stop at ste
 ## Steps
 
 1. **Establish the day.** `today` = local date from `ppa_ReminderTimeZone`.
-2. **Identify the owner.** `WhoAmI` through the Dataverse connection.
+2. **Identify the owner.** No separate step: step 5 filters on "owned by the calling
+   user", which Dataverse resolves from the connection. (`WhoAmI` is not callable from the
+   connector; see research R11.)
 3. **Guard.** Create a `ppa_reminderrun` row with `ppa_name = today`, outcome Started,
    attempts 1.
    - Created → continue.
@@ -39,7 +41,8 @@ Normal night: the 00:00 run does the work and the 01:00–03:00 runs stop at ste
 4. **Validate configuration.** If `ppa_ReminderRecipientEmail` is empty or not a
    plausible address → go to **Failure** with step name `ValidateRecipient`.
 5. **Load Medications.** `statecode eq 0`, `ppa_isactive eq true`,
-   `ppa_frequency ne 894250003`, `_ownerid_value eq <owner>`; select only the columns
+   `ppa_frequency ne 894250003`,
+   `Microsoft.Dynamics.CRM.EqualUserId(PropertyName='ownerid')`; select only the columns
    listed in data-model.md.
 6. **For each Medication**, in sequence:
    1. Latest Taken log and latest Skipped log, each `top 1`, `ppa_loggedat le utcNow()`,

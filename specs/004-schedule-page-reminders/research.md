@@ -233,6 +233,24 @@ for the send action so the address does not appear in run history.
   message may land in junk at the recipient; the owner marks the sender as safe once.
 - Replies go nowhere. The email is a notification only.
 
+**Blocked in this tenant (found 2026-10-05, first real run, tasks.md T034)**: the send
+step failed with HTTP 401 and this message from the connector:
+
+> The Mail connector is currently restricted for new tenants. Microsoft is working on
+> enabling this connector. In the meantime, please consider using alternatives like
+> Office 365 Outlook, Gmail, SendGrid connector instead.
+
+The rest of that run was correct, and the failure was recorded as designed: Reminder Run
+outcome Failed, error step `SendEmail (401)`. The Mail connector cannot be used here until
+Microsoft lifts the restriction, so this decision is open again. The owner's tenant account
+holds a Developer E5 licence with an Exchange Online mailbox, which makes Office 365 Outlook
+*Send an email (V2)* usable; it sends from that mailbox.
+
+One more observation from the failed send: Secure Inputs hid the step's inputs, but the
+connector's **error response stayed readable** in run history even with Secure Outputs on.
+That response held no address this time. It is the reason the flow stores only the step
+name and status code, never the error text (R9).
+
 **Alternatives considered**: Office 365 Outlook *Send an email (V2)* — sends from the
 owner's own mailbox, but needs an Exchange Online mailbox and a user OAuth connection;
 Outlook.com connector (personal account in a work tenant); SMTP connector (credentials to
@@ -384,7 +402,24 @@ unlicensed or non-compliant. If it does, in order of preference:
 the Dataverse Web API as a solution component of `MedTrackSolution`, turned **off**, with
 unique name `ppa_MedTrackDailyReminder`. It cannot be turned on until the two connections
 exist and the address is set (T028, T029), so its connector steps (WhoAmI, list rows, add
-and update a row, send email) have **not run yet**; T034 is their first test.
+and update a row, send email) had not run when this was written.
+
+**First real run (2026-10-05, later the same day)**, after the owner created the
+connections and set the address. Seeded with the decision table and tested through the
+time-zone workaround in R5:
+
+| Step | Result |
+|---|---|
+| Turn the flow on | failed until the `WhoAmI` step was replaced (R11) |
+| Guard: add the Reminder Run row | worked; a second add for the same day is rejected with HTTP 412 |
+| List Medications owned by the connection's user | worked |
+| Latest Taken and latest Skipped log per Medication | worked |
+| Due today, from real rows | S01, S03, S04, S12, S17, S18, S25, S27, S29 — matches the contract — plus the owner's own Medications |
+| Send the email | **failed, HTTP 401: Mail connector restricted for new tenants (R7)** |
+| Failure path | Reminder Run outcome Failed, error step `SendEmail (401)`, run ended Failed |
+
+T034 stays open until an email can be sent. The flow was turned off again and the seeded
+rows, the test Reminder Run and the temporary time zone were removed.
 
 Everything else was run in dev first, in a copy of the flow whose connector steps were
 replaced by stand-in steps fed from `tests/fixtures/schedule-cases.json`:
@@ -421,6 +456,14 @@ own, shared with the service principal that owns the flow, so `WhoAmI` returns t
 **Rationale**: The reminder is personal and single-recipient (spec Assumptions). If the
 connection's user holds a broad role such as System Administrator, an unfiltered query
 would return every user's Medications and email them all to one address.
+
+**Changed while building (2026-10-05)**: `WhoAmI` cannot be called from the flow. It is a
+Dataverse *function*, and the connector's "Perform an unbound action" offers actions only;
+turning the flow on failed until the step was removed. The flow now filters with
+`Microsoft.Dynamics.CRM.EqualUserId(PropertyName='ownerid')`, which Dataverse evaluates as
+"owned by the calling user" — the same rows, with no separate step. Checked in the first
+real run: with the owner's connection the flow listed the nine seeded rows that were due
+and the owner's own Medications, and nothing else.
 
 ---
 
