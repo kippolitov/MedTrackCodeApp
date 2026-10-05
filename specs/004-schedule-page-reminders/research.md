@@ -166,6 +166,26 @@ current value in dev. The same test showed that `workflow.uniquename` can be set
 flow is created through the Web API, which is how `configure-reminder-flow.ps1` finds the
 flow.
 
+**Consequence found in the same session — a manual test obeys the trigger condition.**
+A third throwaway flow with the real condition (local hour 0 to 3) was triggered by hand
+while the local hour was 7: the trigger was evaluated and did **not** fire, so no run
+started. "Test → Manually" therefore starts a run only when the local hour in
+`ppa_ReminderTimeZone` is 0 to 3. Moving the hour check into the first action (the
+fallback above) would not help; the run would start and end as Cancelled.
+
+Verified way to test at any time of day, with no design change:
+
+1. Set the current value of `ppa_ReminderTimeZone` in dev to a Windows time zone where it
+   is currently between 00:00 and 03:59.
+2. Turn the flow off and on. A changed value did **not** reach a running flow until this
+   was done; after it, the next manual trigger fired at once.
+3. Seed and assert with the same zone (`-TimeZone` on `seed-reminder-scenarios.ps1` and
+   `assert-reminder-run.ps1`), because "today" is that zone's date.
+4. Restore the real zone and turn the flow off and on again.
+
+This is an open point for the owner: keep the gate and test this way, or change the gate.
+quickstart.md sections E to G assume a manual test simply runs.
+
 **Alternatives considered**:
 - *Daily Recurrence at 00:00 with a literal `timeZone`* — simplest, but the zone would be
   duplicated (trigger and in-flow date maths), hard-coded, and there is no retry.
@@ -243,6 +263,30 @@ component of `MedTrackSolution`.
 
 This is a deliberate, documented exception to the CLAUDE.md rule that every Dataverse
 component is created with the solution header.
+
+**Found while building the flow (2026-10-05) — needs an owner decision.** A flow that
+reads an environment variable with **neither a default value nor a current value cannot be
+turned on**. Activating a test copy of the flow in dev, before any address was set, failed
+with `XrmEnvironmentVariableAttributeNotFound: Attribute 'value' was not found for
+environment variable 'ppa_ReminderRecipientEmail'`. Three things follow:
+
+- In dev the order T029 (set the address) → turn the flow on is required, which is the
+  planned order, so nothing is blocked today.
+- quickstart.md section G ("clear the value → Reminder Run is Failed with
+  `ValidateRecipient`") cannot work as written if clearing means deleting the value row:
+  the flow would have nothing to resolve. The `ValidateRecipient` step itself is verified
+  (see "Flow build" below) for a value that is present but not an address.
+- Production: the definition arrives with the first import, so the address cannot be set
+  before that import (tasks.md T051 runs the script before T052), yet the flow cannot be
+  turned on until it is set. As ordered, the first production deploy would fail at
+  `configure-reminder-flow.ps1`; the owner would then set the address and re-run it.
+
+Recommended change, **not applied**: give `ppa_ReminderRecipientEmail` a default value
+that is plainly not an address, such as `not-configured`. The address still never enters
+the solution; the flow can be turned on in any environment; and a missing address then
+shows up exactly as designed — a Reminder Run with outcome Failed and error step
+`ValidateRecipient`. It would change data-model.md §3 ("Default in solution: None"),
+tasks.md T026 and `create-reminder-schema.ps1`.
 
 **Alternatives considered**:
 - *GitHub Environment secret injected through the deployment settings file* — automates
@@ -335,6 +379,36 @@ unlicensed or non-compliant. If it does, in order of preference:
   deploy. Set aside at the owner's direction.
 - *Import flows by hand in each environment* — bypasses the pipeline that spec 003 made
   the only release path.
+
+**Flow build (2026-10-05, tasks.md T031 to T033)**: the flow was created in dev through
+the Dataverse Web API as a solution component of `MedTrackSolution`, turned **off**, with
+unique name `ppa_MedTrackDailyReminder`. It cannot be turned on until the two connections
+exist and the address is set (T028, T029), so its connector steps (WhoAmI, list rows, add
+and update a row, send email) have **not run yet**; T034 is their first test.
+
+Everything else was run in dev first, in a copy of the flow whose connector steps were
+replaced by stand-in steps fed from `tests/fixtures/schedule-cases.json`:
+
+| Scenario | Result |
+|---|---|
+| Full decision table, zone UTC | 9 due: S01, S03, S04, S12, S17, S18, S25, S27, S29 — matches the contract; ordered by Reminder Time then name; injection lines show last taken and site |
+| Full table, zone `Hawaiian Standard Time` (local date one day behind UTC) | same 9 due |
+| Only rows that are not due | outcome Nothing To Send, no send step |
+| Run already recorded as Sent | run ends Succeeded at the guard, nothing else runs |
+| Run already recorded as Failed | set to Started, attempts 2, check continues |
+| Row can be neither created nor read | run ends Failed (`GuardFailed`) |
+| Recipient is not an address | outcome Failed, error step `ValidateRecipient (BadRequest)`, run Failed |
+| Send step fails | outcome Failed, error step `SendEmail (…)`, run Failed |
+| Step after an accepted send fails | outcome left as Started, run Failed |
+
+Two platform details from that work: a Compose step accepts Secure Inputs only (which also
+hides its output), and `createArray()` cannot be called with no arguments.
+
+The copy was deleted afterwards. Because the address is never written into the flow, its
+parameter for `ppa_ReminderRecipientEmail` has an empty default in the definition. Saving
+the flow in the designer may rewrite that default from the environment; if an address ever
+appeared there, the email-address checks on `solution/src` and on the exported zip are
+what would catch it before a commit or an artifact upload.
 
 ---
 

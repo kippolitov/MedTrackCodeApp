@@ -81,6 +81,14 @@ its own rows with `-Remove`.
 
 ## E. Daily reminder — full run
 
+> **Before a manual test (found 2026-10-05, research R5)**: "Test → Manually" obeys the
+> trigger condition, so it starts a run only when the local hour in `ppa_ReminderTimeZone`
+> is 0 to 3. To test at another time, set that variable's current value in dev to a zone
+> where it is now between 00:00 and 03:59, turn the flow off and on, and pass the same
+> zone as `-TimeZone` to the seed and assert scripts. Restore the zone afterwards.
+> The flow also cannot be turned on until `ppa_ReminderRecipientEmail` has a value
+> (research R8).
+
 1. Delete today's Reminder Run row if one exists (the guard would otherwise stop the run).
 2. In Power Automate, open **MedTrack – Daily Reminder** and choose **Test → Manually**.
 3. Check the result:

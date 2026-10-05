@@ -33,6 +33,10 @@
 .PARAMETER Remove
   Delete the seeded rows and stop.
 
+.PARAMETER AllowNonDev
+  Required to seed any environment other than the default one. The seed adds
+  33 test Medications, and the daily reminder would email them.
+
 .EXAMPLE
   pwsh scripts/reminder/seed-reminder-scenarios.ps1
   pwsh scripts/reminder/seed-reminder-scenarios.ps1 -Remove
@@ -40,11 +44,16 @@
 param(
     [string]$EnvironmentUrl = 'https://org9c89b427.crm.dynamics.com',
     [string]$TimeZone,
-    [switch]$Remove
+    [switch]$Remove,
+    [switch]$AllowNonDev
 )
 
 $ErrorActionPreference = 'Stop'
+$devUrl      = 'https://org9c89b427.crm.dynamics.com'
 $envUrl      = $EnvironmentUrl.TrimEnd('/')
+if (-not $Remove -and $envUrl -ne $devUrl -and -not $AllowNonDev) {
+    throw "Refusing to seed ${envUrl}: it is not the dev environment. Pass -AllowNonDev if this is intended."
+}
 $apiBase     = "$envUrl/api/data/v9.2"
 $repoRoot    = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $fixturePath = Join-Path $repoRoot 'tests/fixtures/schedule-cases.json'

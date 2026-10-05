@@ -62,8 +62,9 @@ function Split-Ids {
     param([string[]]$Values)
     return @($Values | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object -Unique)
 }
-$dueExpected      = Split-Ids $ExpectDue
-$followUpExpected = Split-Ids $ExpectFollowUp
+# @(...) keeps an empty result an empty array; a function returning no items yields $null.
+$dueExpected      = @(Split-Ids $ExpectDue)
+$followUpExpected = @(Split-Ids $ExpectFollowUp)
 
 $zone  = if ($TimeZone) { [TimeZoneInfo]::FindSystemTimeZoneById($TimeZone) } else { [TimeZoneInfo]::Local }
 $today = [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $zone).ToString('yyyy-MM-dd')
@@ -125,8 +126,8 @@ $problems = @()
 
 function Compare-Ids {
     param([string]$Group, [string[]]$Expected, [string[]]$Actual)
-    $missing    = @($Expected | Where-Object { $_ -notin $Actual })
-    $unexpected = @($Actual | Where-Object { $_ -notin $Expected })
+    $missing    = @($Expected | Where-Object { $_ -and $_ -notin $Actual })
+    $unexpected = @($Actual | Where-Object { $_ -and $_ -notin $Expected })
     $found = @()
     if ($missing.Count -gt 0)    { $found += "$Group — expected but not listed: $($missing -join ', ')" }
     if ($unexpected.Count -gt 0) { $found += "$Group — listed but not expected: $($unexpected -join ', ')" }

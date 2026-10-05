@@ -105,14 +105,15 @@ Nothing due and nothing missed means no email. Switching a Medication to Inactiv
 
 1. Create a **Microsoft Dataverse** connection, signed in as the person whose Medications are tracked, and a **Mail** connection. Share each with the deployment service principal as "Can use".
 2. On the GitHub Environment (`dev`, `production`), set the variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` and `REMINDER_TIME_ZONE` (a Windows time zone name such as `Eastern Standard Time`).
-3. Set the reminder address:
+3. Deploy. The first deploy to a new environment brings in the flow and the environment variables, then stops at "Configure reminder flow": the flow cannot be turned on until it has an address to read.
+4. Set the reminder address:
 
    ```powershell
    pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl https://<your-org>.crm.dynamics.com
    ```
 
    The script asks for the address with hidden input and stores it as the value of the environment variable `ppa_ReminderRecipientEmail`. Run it again to change the address.
-4. Deploy. After the first deploy, open the flow's Details page and confirm it is not reported as unlicensed: the service principal owns the flow and the Dataverse connector is premium.
+5. Re-run the deploy; it turns the flow on. Then open the flow's Details page and confirm it is not reported as unlicensed: the service principal owns the flow and the Dataverse connector is premium.
 
 ### The reminder address stays out of this repository
 

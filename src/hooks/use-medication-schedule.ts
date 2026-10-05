@@ -45,7 +45,7 @@ function latestLogQuery(medicationId: string, kind: keyof typeof LATEST_LOG_STAT
   }
 }
 
-export interface MedicationSchedule {
+export interface MedicationScheduleResult {
   /** Undefined while loading and when either query failed. */
   details: ScheduleDetails | undefined
   isLoading: boolean
@@ -55,7 +55,7 @@ export interface MedicationSchedule {
   refetch: () => Promise<void>
 }
 
-export function useMedicationSchedule(medication: Ppa_medications): MedicationSchedule {
+export function useMedicationSchedule(medication: Ppa_medications): MedicationScheduleResult {
   const id = medication.ppa_medicationid
   const [taken, skipped] = useQueries({
     queries: [latestLogQuery(id, 'taken'), latestLogQuery(id, 'skipped')],

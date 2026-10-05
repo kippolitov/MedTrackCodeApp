@@ -17,8 +17,9 @@ Two modes:
 On failure only the offending file path is printed, never the matched text:
 this script's output lands in public workflow logs.
 
-The address pattern and allowlist mirror the `email-address` rule in
-.gitleaks.toml. Keep the two in step.
+The address pattern is the one in the `email-address` rule of .gitleaks.toml;
+keep the two in step. The allowlist here is deliberately shorter: the two
+documentation-only entries in .gitleaks.toml have no place in solution content.
 #>
 [CmdletBinding(DefaultParameterSetName = 'Path')]
 param(
