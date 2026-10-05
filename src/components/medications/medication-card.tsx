@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import {
 } from '@/generated/models/Ppa_medicationsModel'
 import type { MedicationViewModel } from '@/lib/adherence'
 import { formatTime } from '@/lib/date-utils'
+import MedicationSchedule from './medication-schedule'
 
 export type { MedicationViewModel }
 
@@ -154,6 +156,9 @@ export default function MedicationCard({
           </Label>
           {isTogglingActive && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
         </div>
+
+        <Separator />
+        <MedicationSchedule medication={medication} />
       </div>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

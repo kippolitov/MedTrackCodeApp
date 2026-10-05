@@ -27,15 +27,36 @@ function dateRangeFromFilter(filter?: string): { from?: number; to?: number } {
   }
 }
 
+// `ppa_status eq <n>` and `_ppa_medication_value eq <id>` equality terms, as
+// sent by the schedule section's latest-log queries.
+function equalsFromFilter(filter?: string): { status?: number; medicationId?: string } {
+  if (!filter) return {}
+  const status = filter.match(/ppa_status eq (\d+)/)?.[1]
+  const medicationId = filter.match(/_ppa_medication_value eq ([^\s]+)/)?.[1]
+  return {
+    status: status ? Number(status) : undefined,
+    medicationId,
+  }
+}
+
 export class Ppa_intakelogsService {
-  static async getAll(options?: { select?: string[]; filter?: string }) {
+  static async getAll(options?: { select?: string[]; filter?: string; orderBy?: string[]; top?: number }) {
     const { from, to } = dateRangeFromFilter(options?.filter)
-    const data = intakeLogs.filter((l) => {
+    const { status, medicationId } = equalsFromFilter(options?.filter)
+    let data = intakeLogs.filter((l) => {
       const t = Date.parse(l.ppa_loggedat)
       if (from !== undefined && t < from) return false
       if (to !== undefined && t > to) return false
+      if (status !== undefined && l.ppa_status !== status) return false
+      if (medicationId !== undefined && l._ppa_medication_value !== medicationId) return false
       return true
     })
+    const order = options?.orderBy?.find((o) => o.startsWith('ppa_loggedat'))
+    if (order) {
+      const direction = order.endsWith(' desc') ? -1 : 1
+      data = [...data].sort((a, b) => direction * (Date.parse(a.ppa_loggedat) - Date.parse(b.ppa_loggedat)))
+    }
+    if (options?.top !== undefined) data = data.slice(0, options.top)
     return delay({ data, success: true })
   }
 
