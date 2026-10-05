@@ -2,9 +2,12 @@
   "schema_version": "1.0",
   "extensions": {
     "git": {
-      "version": "1.0.0",
-      "source": "local",
-      "manifest_hash": "sha256:9731aa8143a72fbebfdb440f155038ab42642517c2b2bdbbf67c8fdbe076ed79",
+      "version": "1.0.1",
+      "source": {
+        "kind": "catalog",
+        "catalog": "default"
+      },
+      "manifest_hash": "sha256:698cc7089602db44622de39730555db4999cda94ab47195bcfe18f41d08b430a",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
@@ -20,9 +23,12 @@
       "installed_at": "2026-06-16T06:08:47.448156+00:00"
     },
     "agent-context": {
-      "version": "1.0.0",
-      "source": "local",
-      "manifest_hash": "sha256:9a1dc02d2d0139bb03860392ecacef79183be2c442feda2f9ccaa4e5907b1e47",
+      "version": "1.0.2",
+      "source": {
+        "kind": "catalog",
+        "catalog": "default"
+      },
+      "manifest_hash": "sha256:270100175bb742c37b8d549f2233c5b79114869dac754883dbecac2a4813beef",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
