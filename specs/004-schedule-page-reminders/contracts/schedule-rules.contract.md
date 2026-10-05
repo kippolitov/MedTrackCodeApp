@@ -133,11 +133,12 @@ show the Taken log, not the Skipped one; S17 shows 4 Oct), or "Not yet taken".
 
 ## How the two implementations are held to this table
 
-- `tests/fixtures/schedule-cases.ts` contains one case per row, keyed by the row number.
+- `tests/fixtures/schedule-cases.json` contains one case per row, keyed by the row number,
+  with every date and weekday stored as an offset from "today" so it works on any day.
   `tests/lib/schedule.test.ts` asserts status, next intake, missed due date, days overdue
   and follow-up for every case.
-- `scripts/reminder/seed-reminder-scenarios.ps1` creates the same rows in the dev
-  environment with every date shifted so that the table's "5 Oct" is the day the script is
-  run, and names each Medication with its row number. The `ppa_Summary` of that day's
+- `scripts/reminder/seed-reminder-scenarios.ps1` reads that same file and creates the rows
+  in the dev environment, resolving the offsets against the day the script is run, and
+  names each Medication with its row number. The `ppa_Summary` of that day's
   Reminder Run must list exactly the row numbers marked Due and Follow-up above.
 - A change to any rule changes this table first, then both implementations.

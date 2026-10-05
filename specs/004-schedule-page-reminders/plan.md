@@ -62,7 +62,7 @@ intake-log queries use `staleTime` ≤ 30 s. Cross-platform: every script is `.p
 
 **Scale/Scope**: One owner; roughly 5–15 Medications; one email a day; about 365
 `ppa_ReminderRun` rows a year. 1 new library module, 1 hook, 1 component, 1 table, 1 flow,
-2 environment variables, 2 connection references, 6 scripts, 3 workflow edits.
+2 environment variables, 2 connection references, 7 scripts, 3 workflow edits.
 
 **Unknowns**: None block planning. The owner settled the three open choices on
 2026-10-05: try the time-zone environment variable in the trigger condition (research R5),
@@ -102,7 +102,7 @@ clock (Principle I, predictability).
 | Define a security model | data-model.md §7 |
 | No placeholder columns, no rollup fields | Every `ppa_ReminderRun` column is written by the flow; counts are computed in the flow |
 | Never silently swallow errors | Card shows an error with Retry; flow records Failed and ends the run as Failed |
-| PowerShell for Dataverse API calls | All six scripts are `.ps1` |
+| PowerShell for Dataverse API calls | All seven scripts are `.ps1` |
 | No parallel table creation | One table |
 | Homepage strategy, forms, plug-ins, PCF | Not applicable — no model-driven app, form, plug-in or control is added |
 
@@ -144,7 +144,7 @@ src/
 
 tests/
 ├── fixtures/
-│   └── schedule-cases.ts              # NEW  one case per decision-table row
+│   └── schedule-cases.json            # NEW  one case per decision-table row; read by Vitest and the seed script
 ├── lib/
 │   ├── schedule.test.ts               # NEW
 │   └── adherence.test.ts              # EDIT Biweekly: one day per fortnight
@@ -170,6 +170,7 @@ scripts/
 ├── deploy/
 │   └── configure-reminder-flow.ps1    # NEW  confirm service-principal owner, turn on
 └── reminder/
+    ├── create-reminder-schema.ps1     # NEW  table, variable definitions, connection references
     ├── set-reminder-recipient.ps1     # NEW  local only; prompts for the address
     ├── seed-reminder-scenarios.ps1    # NEW  decision table → dev, dates relative to today
     └── assert-reminder-run.ps1        # NEW  checks today's ppa_ReminderRun
