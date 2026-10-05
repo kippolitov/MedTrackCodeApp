@@ -76,6 +76,17 @@ jobs:
           solution-file: out/MedTrackCore.zip
           solution-type: Unmanaged
 
+      # Binds the reminder flow's connection references and sets the time
+      # zone for this environment. The reminder address is not among these
+      # values: it never passes through GitHub (spec 004, FR-028).
+      - name: Render deployment settings
+        shell: pwsh
+        env:
+          PP_CONN_DATAVERSE_ID: ${{ vars.PP_CONN_DATAVERSE_ID }}
+          PP_CONN_MAIL_ID: ${{ vars.PP_CONN_MAIL_ID }}
+          REMINDER_TIME_ZONE: ${{ vars.REMINDER_TIME_ZONE }}
+        run: ./scripts/ci/render-deployment-settings.ps1
+
       - name: Import solution
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
@@ -84,6 +95,8 @@ jobs:
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
           solution-file: out/MedTrackCore.zip
+          use-deployment-settings-file: true
+          deployment-settings-file: solution/deployment-settings.json
 
       - name: Publish solution customizations
         uses: microsoft/powerplatform-actions/publish-solution@v1
@@ -92,6 +105,17 @@ jobs:
           app-id: ${{ secrets.PP_CLIENT_ID }}
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
+
+      # A flow left off after import sends no reminders and raises no error,
+      # so fail the deploy unless it is on and owned by the service principal.
+      - name: Configure reminder flow
+        shell: pwsh
+        env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
+          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
+        run: ./scripts/deploy/configure-reminder-flow.ps1
 
       # --- App (US2, FR-005): pac code push and pac data import (below) use
       # the pac CLI directly, so authenticate immediately before them here

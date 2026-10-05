@@ -53,6 +53,14 @@ jobs:
           solution-file: out/MedTrackCore.zip
           solution-type: Unmanaged
 
+      - name: Render deployment settings (dev)
+        shell: pwsh
+        env:
+          PP_CONN_DATAVERSE_ID: ${{ vars.PP_CONN_DATAVERSE_ID }}
+          PP_CONN_MAIL_ID: ${{ vars.PP_CONN_MAIL_ID }}
+          REMINDER_TIME_ZONE: ${{ vars.REMINDER_TIME_ZONE }}
+        run: ./scripts/ci/render-deployment-settings.ps1
+
       - name: Sync dev to source-controlled solution
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
@@ -61,6 +69,8 @@ jobs:
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
           solution-file: out/MedTrackCore.zip
+          use-deployment-settings-file: true
+          deployment-settings-file: solution/deployment-settings.json
 
       - name: Publish dev customizations
         uses: microsoft/powerplatform-actions/publish-solution@v1
@@ -80,6 +90,14 @@ jobs:
           solution-name: MedTrackSolution
           solution-output-file: out/MedTrackCore_managed.zip
           managed: true
+
+      # Must stay BEFORE the upload below. The artifact of a public
+      # repository is downloadable, so this is the step that stops an
+      # environment variable value (the reminder address) or any other email
+      # address from being published with the solution (spec 004, FR-028).
+      - name: Check exported solution for environment variable values
+        shell: pwsh
+        run: ./scripts/ci/assert-no-envvar-values.ps1 -Zip out/MedTrackCore_managed.zip
 
       - name: Upload managed solution artifact
         uses: actions/upload-artifact@v4
@@ -136,6 +154,15 @@ jobs:
           name: managed-solution
           path: out
 
+      # Rendered from the `production` GitHub Environment's own variables.
+      - name: Render deployment settings (production)
+        shell: pwsh
+        env:
+          PP_CONN_DATAVERSE_ID: ${{ vars.PP_CONN_DATAVERSE_ID }}
+          PP_CONN_MAIL_ID: ${{ vars.PP_CONN_MAIL_ID }}
+          REMINDER_TIME_ZONE: ${{ vars.REMINDER_TIME_ZONE }}
+        run: ./scripts/ci/render-deployment-settings.ps1
+
       - name: Import solution (Managed)
         uses: microsoft/powerplatform-actions/import-solution@v1
         with:
@@ -144,6 +171,8 @@ jobs:
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
           solution-file: out/MedTrackCore_managed.zip
+          use-deployment-settings-file: true
+          deployment-settings-file: solution/deployment-settings.json
 
       - name: Publish solution customizations
         uses: microsoft/powerplatform-actions/publish-solution@v1
@@ -152,6 +181,17 @@ jobs:
           app-id: ${{ secrets.PP_CLIENT_ID }}
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
+
+      # A flow left off after import sends no reminders and raises no error,
+      # so fail the deploy unless it is on and owned by the service principal.
+      - name: Configure reminder flow
+        shell: pwsh
+        env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
+          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
+        run: ./scripts/deploy/configure-reminder-flow.ps1
 
       # --- App (US2, FR-005): pac code push and pac data import (below) use
       # the pac CLI directly, so authenticate immediately before them here

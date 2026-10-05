@@ -147,6 +147,25 @@ condition first.
 may not, drop the condition and make "local hour not 0–3" the first action, ending the run
 as Cancelled. The design is otherwise unchanged.
 
+**Verified (2026-10-05, tasks.md T030)**: yes — the trigger condition can read the
+environment variable, and it reads the **current value**, not the default written into the
+flow definition. Two throwaway solution flows were created in dev through the Dataverse
+Web API, each with a one-minute Recurrence trigger and the condition
+`@equals(convertFromUtc(utcNow(), parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'HH'), '<hour>')`,
+while the variable's current value was temporarily `Eastern Standard Time` (default `UTC`):
+
+| Flow | `<hour>` | Saved and turned on | Runs in the next minutes |
+|---|---|---|---|
+| A | the Eastern hour (`03`) | yes | one per minute, all Succeeded |
+| B | the UTC hour (`07`) | yes | none |
+
+A fired and B did not, so the condition used the value set in the environment. The
+fallback (hour check as the first action) is not needed. Both flows and the temporary
+value were deleted afterwards; `ppa_ReminderTimeZone` is back to its default with no
+current value in dev. The same test showed that `workflow.uniquename` can be set when a
+flow is created through the Web API, which is how `configure-reminder-flow.ps1` finds the
+flow.
+
 **Alternatives considered**:
 - *Daily Recurrence at 00:00 with a literal `timeZone`* — simplest, but the zone would be
   duplicated (trigger and in-flow date maths), hard-coded, and there is no retry.

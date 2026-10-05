@@ -1,0 +1,20 @@
+{
+  "EnvironmentVariables": [
+    {
+      "SchemaName": "ppa_ReminderTimeZone",
+      "Value": "__REMINDER_TIME_ZONE__"
+    }
+  ],
+  "ConnectionReferences": [
+    {
+      "LogicalName": "ppa_MedTrackDataverse",
+      "ConnectionId": "__CONN_DATAVERSE_ID__",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+    },
+    {
+      "LogicalName": "ppa_MedTrackMail",
+      "ConnectionId": "__CONN_MAIL_ID__",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_sendmail"
+    }
+  ]
+}

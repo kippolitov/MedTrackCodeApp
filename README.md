@@ -16,7 +16,8 @@ MedTrack is a **React 19 + TypeScript Power Apps Code App** backed by **Microsof
 | **Log Intake** | Segmented Taken / Skipped / Missed control; interactive body map for injection sites |
 | **Calendar** | Month view with colour-coded dose history; tap any day to log or edit |
 | **Analytics** | Adherence trend charts across 3-month, 6-month, and 1-year windows; CSV export |
-| **Medications** | Add, edit, deactivate, and archive medications; Active / Inactive grouping |
+| **Medications** | Add, edit, deactivate, and archive medications; Active / Inactive grouping; last taken and next intake on every card |
+| **Daily email** | One email a day listing what is due, with follow-ups for a week after a missed intake |
 
 **Adherence is computed from first principles** — `Taken ÷ non-Skipped`. *Skipped* is deliberately neutral: a clinical choice that doesn't count for or against the user. That's an [Architecture Decision Record](docs/adr/0001-skipped-doses-neutral.md), not an accident.
 
@@ -91,6 +92,45 @@ Manual promotion
 
 ---
 
+## Daily email reminder
+
+A scheduled cloud flow, **MedTrack – Daily Reminder**, checks once a day at local midnight and sends one email:
+
+- **Due today** — every Active Medication due that day. Injections count from the last dose; everything else follows its fixed schedule.
+- **Follow-ups** — a Medication whose intake was missed, on the 1st, 3rd, 5th and 7th day afterwards. Logging it as Taken or Skipped stops the follow-ups.
+
+Nothing due and nothing missed means no email. Switching a Medication to Inactive is the only reminder switch. The flow reads Medications and Intake Logs and never changes them. The rules are the same ones the Medications page uses; both are tested against one decision table in [`contracts/schedule-rules.contract.md`](specs/004-schedule-page-reminders/contracts/schedule-rules.contract.md).
+
+### One-time setup per environment
+
+1. Create a **Microsoft Dataverse** connection, signed in as the person whose Medications are tracked, and a **Mail** connection. Share each with the deployment service principal as "Can use".
+2. On the GitHub Environment (`dev`, `production`), set the variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` and `REMINDER_TIME_ZONE` (a Windows time zone name such as `Eastern Standard Time`).
+3. Set the reminder address:
+
+   ```powershell
+   pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl https://<your-org>.crm.dynamics.com
+   ```
+
+   The script asks for the address with hidden input and stores it as the value of the environment variable `ppa_ReminderRecipientEmail`. Run it again to change the address.
+4. Deploy. After the first deploy, open the flow's Details page and confirm it is not reported as unlicensed: the service principal owns the flow and the Dataverse connector is premium.
+
+### The reminder address stays out of this repository
+
+This repository is public, so the address is never written in it — not in a file, a commit message, an issue or a pull request. The only example address anywhere here is `reminder@example.com`.
+
+- The solution holds the **definition** of `ppa_ReminderRecipientEmail` and never its value. The script creates the value outside the solution, so a solution export cannot contain it.
+- The address does not pass through GitHub at all, not even as a secret.
+- CI rejects a committed email address (gitleaks rule `email-address`) and an environment variable value in `solution/src`. The production promotion checks the exported solution zip again before it is uploaded as an artifact.
+
+### Good to know
+
+- **A changed address can take up to an hour to apply.** The next run may still use the old one.
+- **The first email may land in junk.** The Mail connector sends from a Microsoft service address, not from you. Mark the sender as safe once. Replies go nowhere.
+- **A failed check does not email anyone.** Power Automate sends failure notices to the flow's owner, and the owner is a service principal. The record of each day is a row in the **Reminder Run** table (`ppa_reminderrun`) — outcome Sent, Nothing To Send or Failed, with the step that failed — and the flow's run history. A day with no row at all means the flow could not reach Dataverse.
+- **At most one email a day.** A second run on the same day stops at the Reminder Run row. A failed run is retried on the hour until 03:00 local time.
+
+---
+
 ## Project structure
 
 ```
@@ -98,7 +138,7 @@ src/
 ├── components/         # UI components (dashboard, calendar, analytics, medications, intake)
 ├── generated/          # Auto-generated Dataverse service layer (the only data access path)
 ├── hooks/              # TanStack Query hooks (use-medications, use-intake-logs, use-adherence…)
-├── lib/                # Pure domain logic (adherence.ts, date-utils.ts, injection-sites.ts…)
+├── lib/                # Pure domain logic (adherence.ts, schedule.ts, date-utils.ts, injection-sites.ts…)
 ├── pages/              # Route-level page components
 ├── stores/             # Zustand UI state (log-intake-store, ui-store)
 └── mocks/              # MSW mock service layer for testing
@@ -106,6 +146,7 @@ src/
 specs/                  # Spec Kit artifacts — the paper trail for every feature
 docs/adr/               # Architecture Decision Records
 solution/               # Dataverse schema as an unpacked, source-controlled solution
+scripts/reminder/       # Scripts the owner runs by hand: reminder address, schema, test scenarios
 .github/workflows/      # CI/CD pipeline
 ```
 
