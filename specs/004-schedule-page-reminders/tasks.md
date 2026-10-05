@@ -160,7 +160,7 @@ a branch name, an issue or a pull request. The only example address in this repo
 **Purpose**: Review, production rollout, and the checks that span stories.
 
 - [X] T048 Run the `code-review` skill over `src/lib/schedule.ts`, `src/hooks/use-medication-schedule.ts`, `src/components/medications/medication-schedule.tsx` and `scripts/`; fix every CRITICAL finding (dead wiring, swallowed errors, placeholders)
-- [ ] T049 Run the `visual-qa` skill on the Medications page with its edge-case checklist (empty list, intake history error, long Medication names, 375 px and 768 px, dark mode), recording against `specs/004-schedule-page-reminders/contracts/ui-medication-schedule.contract.md`
+- [X] T049 Run the `visual-qa` skill on the Medications page with its edge-case checklist (empty list, intake history error, long Medication names, 375 px and 768 px, dark mode), recording against `specs/004-schedule-page-reminders/contracts/ui-medication-schedule.contract.md`
 - [X] T050 [P] Compare the gzipped main chunk of `npm run build:ci` on this branch with `main`; if it grew by more than 50 KB, record the justification in `specs/004-schedule-page-reminders/plan.md` Complexity Tracking
 - [ ] T051 (owner) In production: create and share the two connections, set GitHub Environment `production` variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` and `REMINDER_TIME_ZONE`, and run `pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl <production url>`, per `contracts/privacy-and-deployment.contract.md`
 - [ ] T052 Run "Promote to Production" (`.github/workflows/promote-prod.yml`): the zip check must pass; download the `managed-solution` artifact and confirm it contains no `environmentvariablevalues.json` and no address; confirm the flow is on in production

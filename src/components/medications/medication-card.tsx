@@ -91,11 +91,11 @@ export default function MedicationCard({
     <>
       <div className="border rounded-lg p-4 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{medication.ppa_name}</span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="font-medium wrap-anywhere">{medication.ppa_name}</span>
             <Badge variant="secondary">{medication.ppa_dosage}</Badge>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"

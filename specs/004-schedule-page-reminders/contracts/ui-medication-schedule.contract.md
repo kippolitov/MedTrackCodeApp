@@ -106,3 +106,35 @@ Both return arrays (zero or one item) and use `staleTime` 30 s.
 | Loading and error states, single error toast | `tests/components/medication-schedule.test.tsx` |
 | Queries honoured by real Dataverse (`orderBy`, `top`, `select`) | live check in quickstart.md section C |
 | 375 px and 768 px | manual check in quickstart.md |
+
+## Visual QA record (tasks.md T049, 2026-10-05)
+
+Run with the `visual-qa` skill against `npm run dev:mock`, driven by Playwright. Each state
+was produced by switching the in-memory mock data or the mock intake-log service at page
+load, not by changing application code. Evidence is 14 full-page screenshots and measured
+values (kept locally under `.playwright-mcp/qa-004/`, which is not committed). No GIF was
+recorded and no Gemini review was run: the browser tool used here offers neither.
+
+| Check | Result |
+|---|---|
+| Content of all eight mock cards (upcoming, due today, Past Due fixed and rolling, as needed, "Reminders off", "Not yet taken", injection site, "Counted from last dose") | Pass |
+| 375 px and 768 px, no horizontal scroll, nothing outside its card | Pass |
+| Rows: label above value at 375 px, side by side at 768 px | Pass |
+| Dark theme (the app default) and light theme | Pass |
+| Text contrast, lowest value measured in a schedule section | Pass — 6.47:1 dark, 4.74:1 light |
+| Icons hidden from assistive technology; section labelled "Schedule for `<name>`" | Pass |
+| Intake history loading: card fully rendered, two skeleton rows, `aria-busy="true"`, no text | Pass |
+| Intake history failed for one Medication: "Couldn't load schedule." and Retry on that card only, never "Not yet taken", the other seven cards unaffected, one toast | Pass |
+| Intake history failed for every Medication: eight in-card messages, still one toast | Pass |
+| Retry: 69×44 px, visible focus ring from the keyboard, re-runs only that card's two queries, recovers when the service does | Pass |
+| No Medications: existing empty state, no schedule section | Pass |
+| Active switch: "Reminders off" appears and the next intake date returns, with no reload | Pass |
+| Long Medication name with spaces (100 characters) | Pass — wraps |
+| Long Medication name with no spaces (135 characters) | **Failed, fixed** — see below |
+
+**Finding (medium), fixed**: a name with no break opportunity ran out of the card and
+pushed the Edit and Delete buttons out of reach at both widths. This was in the card header,
+which predates this feature. `MedicationCard` now lets the name break anywhere and keeps the
+buttons from shrinking; re-checked at 375 px and 768 px with the same name.
+
+Not checked here: the queries against a real Dataverse endpoint (tasks.md T020).
