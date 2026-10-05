@@ -460,6 +460,16 @@ replaced by stand-in steps fed from `tests/fixtures/schedule-cases.json`:
 Two platform details from that work: a Compose step accepts Secure Inputs only (which also
 hides its output), and `createArray()` cannot be called with no arguments.
 
+**Follow-ups (2026-10-05, tasks.md T044 and T045)**, run in the same kind of copy before
+the real flow could be updated (it waits for the Office 365 Outlook connection, R7):
+
+| Scenario | Result |
+|---|---|
+| Full decision table | subject `MedTrack: 9 due today, 7 follow-ups`; the same 9 due; follow-ups S13, S23, S26 (7 days), S09 (5), S08 (3), S06, S21 (1) — matches the contract, longest past due first; follow-up count 7 |
+| Rows 1, 2 and 3 days past due, none due today | subject `MedTrack: 2 follow-ups`; body has the Follow-ups section only; summary `Due: –`; the 2-day row is not listed |
+| One follow-up | subject `MedTrack: 1 follow-up` |
+| Rows 2, 4 and 8 days past due, and a row created today | outcome Nothing To Send, no send step |
+
 The copy was deleted afterwards. Because the address is never written into the flow, its
 parameter for `ppa_ReminderRecipientEmail` has an empty default in the definition. Saving
 the flow in the designer may rewrite that default from the environment; if an address ever
