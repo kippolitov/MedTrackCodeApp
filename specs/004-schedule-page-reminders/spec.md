@@ -14,6 +14,19 @@
 
 ## Clarifications
 
+### Change after implementation, 2026-10-05
+
+- Q: How should the daily reminder reach the user? → A: As a Microsoft Teams message, which
+  arrives as a notification on the user's phone, with a link to the app. Email was built
+  first and dropped: the user's mail provider refused messages from the new tenant.
+  Everywhere this document says "email", read "reminder message". Consequences: the
+  reminder goes to the user whose Medications are tracked, with no address to configure,
+  so the requirements about choosing, changing and protecting a reminder address (FR-028
+  to FR-031, SC-011, SC-012, User Story 2 scenarios 10 and 11) are met by there being no
+  stored address; the checks that keep any address out of the repository remain. The
+  "subject" is the first line of the message. Details: research R7 and
+  contracts/reminder-flow.contract.md.
+
 ### Session 2026-10-05
 
 - Q: Is the next intake date counted forward from the last Taken date (rolling interval), or is it the next occurrence of the Medication's existing fixed schedule? → A: Rolling for Injection Medications; the existing fixed schedule for every other administration method.

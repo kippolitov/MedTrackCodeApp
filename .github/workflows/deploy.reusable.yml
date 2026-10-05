@@ -77,14 +77,17 @@ jobs:
           solution-type: Unmanaged
 
       # Binds the reminder flow's connection references and sets the time
-      # zone for this environment. The reminder address is not among these
-      # values: it never passes through GitHub (spec 004, FR-028).
+      # zone and the app link for this environment. No address is among
+      # these values: the reminder goes to the Dataverse connection's own
+      # user in Teams (spec 004, FR-028).
       - name: Render deployment settings
         shell: pwsh
         env:
           PP_CONN_DATAVERSE_ID: ${{ vars.PP_CONN_DATAVERSE_ID }}
-          PP_CONN_MAIL_ID: ${{ vars.PP_CONN_MAIL_ID }}
+          PP_CONN_TEAMS_ID: ${{ vars.PP_CONN_TEAMS_ID }}
           REMINDER_TIME_ZONE: ${{ vars.REMINDER_TIME_ZONE }}
+          PP_ENVIRONMENT_ID: ${{ vars.PP_ENVIRONMENT_ID }}
+          PP_APP_ID: ${{ vars.PP_APP_ID }}
         run: ./scripts/ci/render-deployment-settings.ps1
 
       - name: Import solution

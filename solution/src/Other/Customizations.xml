@@ -21,10 +21,10 @@
       <statecode>0</statecode>
       <statuscode>1</statuscode>
     </connectionreference>
-    <connectionreference connectionreferencelogicalname="ppa_MedTrackMail">
-      <connectionreferencedisplayname>MedTrack Mail</connectionreferencedisplayname>
-      <connectorid>/providers/Microsoft.PowerApps/apis/shared_office365</connectorid>
-      <description>Office 365 Outlook connection used to send the daily reminder.</description>
+    <connectionreference connectionreferencelogicalname="ppa_MedTrackTeams">
+      <connectionreferencedisplayname>MedTrack Teams</connectionreferencedisplayname>
+      <connectorid>/providers/Microsoft.PowerApps/apis/shared_teams</connectorid>
+      <description>The owner's Microsoft Teams connection used to post the daily reminder.</description>
       <iscustomizable>1</iscustomizable>
       <promptingbehavior>0</promptingbehavior>
       <statecode>0</statecode>

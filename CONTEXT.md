@@ -73,5 +73,5 @@ A reminder on the 1st, 3rd, 5th or 7th day after a Missed Intake. Stops after th
 _Avoid_: Nag, repeat reminder
 
 **Reminder Run**:
-One row per day (`ppa_reminderrun`) recording the daily check's outcome: Started, Sent, Nothing To Send or Failed. Also the guard that keeps the check to one email a day.
+One row per day (`ppa_reminderrun`) recording the daily check's outcome: Started, Sent, Nothing To Send or Failed. Also the guard that keeps the check to one reminder message a day.
 _Avoid_: Reminder log, run history (that is Power Automate's own record)

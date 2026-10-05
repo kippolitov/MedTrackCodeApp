@@ -29,9 +29,25 @@ Single-project web app (existing structure). New paths added by this feature:
 
 ## Rule for every task
 
-The real reminder address is never typed into a file, a script argument, a commit message,
+No real personal address is ever typed into a file, a script argument, a commit message,
 a branch name, an issue or a pull request. The only example address in this repository is
 `reminder@example.com`.
+
+## Change of delivery channel (2026-10-05)
+
+The reminder is now a **Microsoft Teams message** to the user behind the Dataverse
+connection, not an email (research R7). Tasks below were written for email; where one
+says "email", read "reminder message". What that changed in the task list:
+
+- T026, T029, T032 (recipient part): the variable `ppa_ReminderRecipientEmail`, the script
+  `set-reminder-recipient.ps1` and the `ValidateRecipient` step were built, used, and then
+  removed. There is no address to set.
+- T028, T051: the second connection is Microsoft Teams, and the GitHub variable is
+  `PP_CONN_TEAMS_ID`.
+- T033: the send step is Teams *Post message in a chat or channel* (`SendReminder`),
+  preceded by a lookup of the connection's own user (`Me`). The message ends with a link to
+  the app, from the new variable `ppa_MedTrackAppUrl`.
+- T035, T047: the solution source is at version 1.0.0.4 with the Teams version of the flow.
 
 ---
 
@@ -111,8 +127,8 @@ a branch name, an issue or a pull request. The only example address in this repo
 - [X] T025 [US2] Create `scripts/reminder/create-reminder-schema.ps1` (idempotent, header `MSCRM.SolutionUniqueName: MedTrackSolution`) that creates table `ppa_ReminderRun` exactly as `specs/004-schedule-page-reminders/data-model.md` §2: **User-owned**; activities, notes and auditing off; primary name `ppa_name` Text (10), required, holding the local run date `yyyy-MM-dd`; alternate key `ppa_reminderrun_date` on `ppa_name`; `ppa_Outcome` local Choice, required, values `894250000` Started, `894250001` Sent, `894250002` Nothing To Send, `894250003` Failed; `ppa_DueCount` Whole number 0–1000, required; `ppa_FollowUpCount` Whole number 0–1000, required; `ppa_Summary` Multiline text (4000), optional; `ppa_ErrorStep` Text (200), optional; `ppa_Attempts` Whole number 1–24, required. No lookup to `ppa_medication`. No column for the reminder address
 - [X] T026 [US2] Extend `scripts/reminder/create-reminder-schema.ps1` to also create, in `MedTrackSolution`: environment variable definition `ppa_ReminderRecipientEmail` (Text, **no default value, no current value**), `ppa_ReminderTimeZone` (Text, default `UTC`), and connection references `ppa_MedTrackDataverse` (`shared_commondataserviceforapps`) and `ppa_MedTrackMail` (`shared_office365`; first created for `shared_sendmail`, which this tenant refuses — research R7); finish with `PublishXml`
 - [X] T027 [US2] Run `scripts/reminder/create-reminder-schema.ps1` against dev (`pac auth list` must show MedTrackDev active); confirm the alternate key reaches Active status; identify which security role gives the owner access to `ppa_medication` and, unless it is System Administrator or System Customizer, add user-level Create/Read/Write on `ppa_reminderrun` to it (data-model.md §7)
-- [ ] T028 [US2] (owner) In dev: create a Microsoft Dataverse connection and an Office 365 Outlook connection, both signed in as the owner, share each with the deployment service principal as "Can use", and set GitHub Environment `dev` variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` and `REMINDER_TIME_ZONE` (a Windows time zone name), following `specs/004-schedule-page-reminders/contracts/privacy-and-deployment.contract.md`
-- [X] T029 [US2] (owner) Run `pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl <dev url>` and enter the address at the prompt
+- [ ] T028 [US2] (owner) In dev: create a Microsoft Dataverse connection and a Microsoft Teams connection, both signed in as the owner (done), share each with the deployment service principal as "Can use", and set GitHub Environment `dev` variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_TEAMS_ID` and `REMINDER_TIME_ZONE` (a Windows time zone name), following `specs/004-schedule-page-reminders/contracts/privacy-and-deployment.contract.md`
+- [X] T029 [US2] (owner) Run `pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl <dev url>` and enter the address at the prompt (done for the email version; superseded — the script and the variable no longer exist)
 
 ### Cloud flow for User Story 2
 
@@ -120,7 +136,7 @@ a branch name, an issue or a pull request. The only example address in this repo
 - [X] T031 [US2] In dev, inside `MedTrackSolution`, create the flow "MedTrack – Daily Reminder" per `contracts/reminder-flow.contract.md`: hourly Recurrence at minute 0, the local-hour 0–3 gate from T030, concurrency 1; then steps 1–3: local `today` from `ppa_ReminderTimeZone`, `WhoAmI`, and the guard (create `ppa_reminderrun` with `ppa_name = today`, outcome Started, attempts 1, counts 0; on duplicate key read the row — outcome Failed → set Started and attempts + 1 and continue, anything else → end the run)
 - [X] T032 [US2] Add steps 4–6 to the flow: validate `ppa_ReminderRecipientEmail` (failure step name `ValidateRecipient`); list Medications with `statecode eq 0`, `ppa_isactive eq true`, `ppa_frequency ne 894250003`, `_ownerid_value eq <WhoAmI user>` and only the columns in data-model.md §1; for each, read the latest Taken and latest Skipped log (`top 1`, `ppa_loggedat le utcNow()`, newest first) and apply Steps 1–3 of `contracts/schedule-rules.contract.md` to decide **due today** (rolling for Injection with a Taken or Skipped log, fixed otherwise). Use the date text of `ppa_startdate` as-is, never shifted through a time zone
 - [X] T033 [US2] Add steps 7–9 and the failure path: nothing due → outcome Nothing To Send; otherwise one Office 365 Outlook "Send an email (V2)" (first built with Mail "Send an email notification (V3)", which this tenant refuses — research R7) with Secure Inputs and Secure Outputs on, subject `MedTrack: <n> due today`, HTML section "Due today" ordered by Reminder Time then name, each line `<name> — <dosage> — <Reminder Time or "no reminder time">`, injections adding `Last taken <date> · <site>` or `Not yet taken`; then outcome Sent with `ppa_DueCount`, `ppa_Summary` (`Due: …` / `Follow-up: –`). Wrap steps 4–9 in a scope whose failure handler sets outcome Failed and `ppa_ErrorStep` = `<step name> (<status code>)` only — no raw error text — and ends the run Failed; a failure after the send succeeded leaves the outcome as Started
-- [ ] T034 [US2] In dev run `pwsh scripts/reminder/seed-reminder-scenarios.ps1`, test the flow manually, then `pwsh scripts/reminder/assert-reminder-run.ps1 -ExpectOutcome Sent -ExpectDue S01,S03,S04,S12,S17,S18,S25,S27,S29`; fix the flow until it passes and one email with the nine due rows arrives. Check the send action's inputs are hidden in run history
+- [X] T034 [US2] In dev run `pwsh scripts/reminder/seed-reminder-scenarios.ps1`, test the flow manually, then `pwsh scripts/reminder/assert-reminder-run.ps1 -ExpectOutcome Sent -ExpectDue S01,S03,S04,S12,S17,S18,S25,S27,S29`; fix the flow until it passes and one email with the nine due rows arrives. Check the send action's inputs are hidden in run history (the seeded run passed with the email version, whose messages the owner's mail provider then refused; delivery was confirmed by the owner with the Teams version — research R7, R10)
 
 ### Source control and pipeline for User Story 2
 
@@ -131,7 +147,7 @@ a branch name, an issue or a pull request. The only example address in this repo
 - [X] T039 [US2] Edit `.github/workflows/promote-prod.yml`: use the rendered settings on the dev re-import; run `scripts/ci/assert-no-envvar-values.ps1 -Zip out/MedTrackCore_managed.zip` after "Export solution as Managed" and **before** "Upload managed solution artifact"; in `deploy-production` render with the production variables, import with the settings file, then run `configure-reminder-flow.ps1`
 - [X] T040 [US2] Edit `.github/workflows/ci.yml` to run `pwsh scripts/ci/assert-no-envvar-values.ps1 -Path solution/src` as a required step beside the gitleaks scan, then run `actionlint` over `.github/workflows/`
 - [ ] T041 [US2] Open a pull request, let CI pass, merge, and let `deploy-dev` run. In dev confirm the flow is on and owned by the service principal, then open its Details page: record in `specs/004-schedule-page-reminders/research.md` R10 whether it is reported as unlicensed and, if so, apply the first fallback (owner as co-owner and `licensee_systemuserid`)
-- [ ] T042 [US2] Complete sections F, G and H of `specs/004-schedule-page-reminders/quickstart.md` in dev, skipping the follow-up rows: second run stops at the guard; quiet day gives Nothing To Send; an Inactive row switched to Active is listed; a cleared recipient gives Failed with `ValidateRecipient` and recovers to Sent with attempts 2; a planted non-example address fails CI; changing the address leaves `git status` clean
+- [ ] T042 [US2] Complete sections F, G and H of `specs/004-schedule-page-reminders/quickstart.md` in dev, skipping the follow-up rows: second run stops at the guard; quiet day gives Nothing To Send; an Inactive row switched to Active is listed; a removed Teams connection gives Failed with `SendReminder` and recovers to Sent with attempts 2; a planted non-example address fails CI; changing the address leaves `git status` clean
 - [X] T043 [P] [US2] Add a "Daily email reminder" section to `README.md`: what the flow does, the one-time setup per environment, that the address is set with `scripts/reminder/set-reminder-recipient.ps1` and held in `ppa_ReminderRecipientEmail` (with `reminder@example.com` as the only example), that a change can take up to an hour, that the first email may land in junk, and that failures are visible only in the Reminder Run table and flow run history because the flow owner is a service principal
 
 **Checkpoint**: US1 and US2 both work. The owner gets one email on a due day and none on a quiet day.
@@ -149,7 +165,7 @@ a branch name, an issue or a pull request. The only example address in this repo
 - [X] T044 [US3] Extend the flow's per-Medication step with Step 4 of `contracts/schedule-rules.contract.md`: compute the missed due date (rolling: `localDay(lastResolved) + interval` when before today; fixed: the most recent scheduled date before today that is not earlier than the anchor and has no Taken or Skipped log on or after it), `daysPastDue`, and add the Medication to a **follow-up** list only when it is not due today and `daysPastDue` is 1, 3, 5 or 7
 - [X] T045 [US3] Extend the email and the run record: subject variants `MedTrack: <n> due today, <m> follow-up(s)` and `MedTrack: <m> follow-up(s)`; HTML section "Follow-ups", longest past due first, each line `<name> — <dosage> — was due <date> (<n> day(s) ago)` plus the injection line; either section omitted when empty; a Medication listed at most once; `ppa_FollowUpCount` and the `Follow-up:` group of `ppa_Summary` filled; "Nothing To Send" only when both lists are empty
 - [X] T046 [US3] In dev, with the full seed in place, delete today's Reminder Run, test the flow, and run `pwsh scripts/reminder/assert-reminder-run.ps1 -ExpectOutcome Sent -ExpectDue S01,S03,S04,S12,S17,S18,S25,S27,S29 -ExpectFollowUp S06,S08,S09,S13,S21,S23,S26`. Then, re-running after each change: log S06 as Taken → not listed; switch S08 to Inactive → not listed; remove every due row → an email with follow-ups only (this last case was run in the connection-free copy of the flow only, because the owner's own Medications in dev were due that day; see research R10)
-- [ ] T047 [US3] Export and unpack the updated flow into `solution/src`, bump `<Version>` in `solution/src/Other/Solution.xml` to `1.0.0.3`, run `pwsh scripts/ci/assert-no-envvar-values.ps1 -Path solution/src`, and merge through a pull request so `deploy-dev` redeploys it
+- [ ] T047 [US3] Export and unpack the updated flow into `solution/src`, bump `<Version>` in `solution/src/Other/Solution.xml` to `1.0.0.3` (now `1.0.0.4`, exported with the Teams version; the pull request is still to do), run `pwsh scripts/ci/assert-no-envvar-values.ps1 -Path solution/src`, and merge through a pull request so `deploy-dev` redeploys it
 
 **Checkpoint**: All three stories work in dev.
 
@@ -162,11 +178,11 @@ a branch name, an issue or a pull request. The only example address in this repo
 - [X] T048 Run the `code-review` skill over `src/lib/schedule.ts`, `src/hooks/use-medication-schedule.ts`, `src/components/medications/medication-schedule.tsx` and `scripts/`; fix every CRITICAL finding (dead wiring, swallowed errors, placeholders)
 - [X] T049 Run the `visual-qa` skill on the Medications page with its edge-case checklist (empty list, intake history error, long Medication names, 375 px and 768 px, dark mode), recording against `specs/004-schedule-page-reminders/contracts/ui-medication-schedule.contract.md`
 - [X] T050 [P] Compare the gzipped main chunk of `npm run build:ci` on this branch with `main`; if it grew by more than 50 KB, record the justification in `specs/004-schedule-page-reminders/plan.md` Complexity Tracking
-- [ ] T051 (owner) In production: create and share the two connections, set GitHub Environment `production` variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` and `REMINDER_TIME_ZONE`, and run `pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl <production url>`, per `contracts/privacy-and-deployment.contract.md`
+- [ ] T051 (owner) In production: create and share the two connections, set GitHub Environment `production` variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_TEAMS_ID` and `REMINDER_TIME_ZONE`, per `contracts/privacy-and-deployment.contract.md`
 - [ ] T052 Run "Promote to Production" (`.github/workflows/promote-prod.yml`): the zip check must pass; download the `managed-solution` artifact and confirm it contains no `environmentvariablevalues.json` and no address; confirm the flow is on in production
 - [ ] T053 Complete sections E to G of `specs/004-schedule-page-reminders/quickstart.md` in production using two or three real Medications instead of the seed set
 - [ ] T054 Complete section I of `quickstart.md` in production: after one night, a Reminder Run exists for the new day, created within 15 minutes of local midnight, with exactly one email
-- [ ] T055 Run `gitleaks git --config .gitleaks.toml` over the full history and search every branch for the reminder address by typing it only at an interactive prompt; record a zero result against SC-011 in `specs/004-schedule-page-reminders/checklists/requirements.md`
+- [ ] T055 Run `gitleaks git --config .gitleaks.toml` over the full history; record a zero result against SC-011 in `specs/004-schedule-page-reminders/checklists/requirements.md`
 
 ---
 

@@ -1,16 +1,22 @@
 #Requires -Version 7.0
 <#
 Renders solution/deployment-settings.json from
-solution/deployment-settings.template.json by substituting the
-__CONN_DATAVERSE_ID__ / __CONN_MAIL_ID__ / __REMINDER_TIME_ZONE__ placeholders
-with values from the PP_CONN_DATAVERSE_ID / PP_CONN_MAIL_ID /
-REMINDER_TIME_ZONE environment variables. Run this immediately before the
-solution import in a deploy job, and pass the rendered file to the import.
+solution/deployment-settings.template.json by substituting its placeholders
+with values from environment variables:
+
+  __CONN_DATAVERSE_ID__    PP_CONN_DATAVERSE_ID
+  __CONN_TEAMS_ID__        PP_CONN_TEAMS_ID
+  __REMINDER_TIME_ZONE__   REMINDER_TIME_ZONE
+  __ENVIRONMENT_ID__       PP_ENVIRONMENT_ID   (with __APP_ID__, the app link
+  __APP_ID__               PP_APP_ID            in the reminder)
+
+Run this immediately before the solution import in a deploy job, and pass the
+rendered file to the import.
 
 The rendered file is git-ignored. No value is printed.
 
-There is deliberately no placeholder for ppa_ReminderRecipientEmail: the
-reminder address never passes through GitHub (see
+The reminder is a Teams message to the user behind the Dataverse connection,
+so no address is among these values (see
 specs/004-schedule-page-reminders/contracts/privacy-and-deployment.contract.md).
 #>
 
@@ -26,8 +32,10 @@ if (-not (Test-Path $templatePath)) {
 
 $placeholders = [ordered]@{
     '__CONN_DATAVERSE_ID__'  = 'PP_CONN_DATAVERSE_ID'
-    '__CONN_MAIL_ID__'       = 'PP_CONN_MAIL_ID'
+    '__CONN_TEAMS_ID__'      = 'PP_CONN_TEAMS_ID'
     '__REMINDER_TIME_ZONE__' = 'REMINDER_TIME_ZONE'
+    '__ENVIRONMENT_ID__'     = 'PP_ENVIRONMENT_ID'
+    '__APP_ID__'             = 'PP_APP_ID'
 }
 
 $missing = $placeholders.Values | Where-Object { [string]::IsNullOrWhiteSpace((Get-Item -Path "env:$_" -ErrorAction SilentlyContinue).Value) }

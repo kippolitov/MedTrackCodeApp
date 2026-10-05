@@ -1,12 +1,14 @@
-# Quickstart: Validating Medication Schedule Details & Daily Email Reminder
+# Quickstart: Validating Medication Schedule Details & Daily Reminder
 
 **Feature**: [spec.md](./spec.md) | **Plan**: [plan.md](./plan.md)
 
 A run guide that proves the feature works end to end. Rules, shapes and step lists are in
 the contracts and data model; this file only says how to exercise them and what to expect.
 
-Every example address in this repository is `reminder@example.com`. Never type the real
-reminder address into a file, a commit message, an issue or a pull request.
+Since 2026-10-05 the reminder is a Microsoft Teams message to the user behind the
+Dataverse connection (research R7). No address is configured anywhere. Every example
+address in this repository is `reminder@example.com`; never type a real personal address
+into a file, a commit message, an issue or a pull request.
 
 ## Prerequisites
 
@@ -85,9 +87,9 @@ its own rows with `-Remove`.
 > trigger condition, so it starts a run only when the local hour in `ppa_ReminderTimeZone`
 > is 0 to 3. To test at another time, set that variable's current value in dev to a zone
 > where it is now between 00:00 and 03:59, turn the flow off and on, and pass the same
-> zone as `-TimeZone` to the seed and assert scripts. Restore the zone afterwards.
-> The flow also cannot be turned on until `ppa_ReminderRecipientEmail` has a value
-> (research R8).
+> zone as `-TimeZone` to the seed and assert scripts. Restore the zone afterwards. Set
+> the value outside the solution (not from the solution's own screen), or the next export
+> fails the check in section H.
 
 1. Delete today's Reminder Run row if one exists (the guard would otherwise stop the run).
 2. In Power Automate, open **MedTrack – Daily Reminder** and choose **Test → Manually**.
@@ -99,32 +101,33 @@ pwsh scripts/reminder/assert-reminder-run.ps1 -ExpectDue S01,S03,S04,S12,S17,S18
 
 **Expect**:
 - The script reports outcome **Sent**, 9 due, 7 follow-ups, and an exact match on names.
-- One email arrives at the configured address with a "Due today" section and a
-  "Follow-ups" section; injection rows carry a "Last taken … · site" line.
-- The send action in run history shows its inputs as hidden.
+- One message arrives in Teams, in the chat with the Flow bot ("Workflows"), and as a
+  notification on a phone signed in to the same account. Its first line holds the counts;
+  then a "Due today" section and a "Follow-ups" section, where injection rows carry a
+  "Last taken … · site" line; then an "Open MedTrack" link.
+- In run history the `SendReminder` step shows its inputs and outputs as hidden, and the
+  `Me` step shows its outputs as hidden.
 
 ## F. Daily reminder — guard, quiet day, changes of state
 
 | Step | Expect |
 |---|---|
-| Run the flow a second time on the same day | Run ends at the guard; no second email; Reminder Run unchanged |
+| Run the flow a second time on the same day | Run ends at the guard; no second message; Reminder Run unchanged |
 | Log S06 as Taken, delete today's Reminder Run, run again | S06 no longer listed |
 | Switch S08 to Inactive, delete the row, run again | S08 no longer listed |
 | Switch S31 to Active on a Monday, delete the row, run again | S31 listed under Due |
-| `seed-reminder-scenarios.ps1 -Remove`, delete the row, run again (no Medications due) | Outcome **Nothing To Send**; no email |
+| `seed-reminder-scenarios.ps1 -Remove`, delete the row, run again (no Medications due) | Outcome **Nothing To Send**; no message |
 
 ## G. Daily reminder — failure is visible
 
-1. Clear the value of `ppa_ReminderRecipientEmail` in dev. Do not copy it anywhere first;
-   you will type it again at the script's prompt.
+1. In dev, open the connection reference **MedTrack Teams** and remove its connection.
 2. Delete today's Reminder Run and run the flow.
 
 **Expect**: the run shows **Failed** in run history; the Reminder Run row is **Failed**
-with error step `ValidateRecipient`; no email. Then run
-`pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl <dev url>` and run the
-flow again: the same row moves to **Sent** with attempts = 2.
+with error step `SendReminder`; no message. Then pick the Teams connection again and run
+the flow: the same row moves to **Sent** with attempts = 2.
 
-## H. Reminder address privacy
+## H. Privacy checks
 
 ```bash
 npm run lint && npm run build:ci && npm run test
@@ -138,19 +141,17 @@ Then:
 1. **Planted address**: on a throwaway branch add a real-looking address (not
    `example.com`) to any Markdown file and open a pull request. **Expect**: CI fails at the
    secret scan. Delete the branch.
-2. **Address change**: re-run `set-reminder-recipient.ps1` with a different address.
-   **Expect**: `git status` is clean; within an hour the next run goes to the new address.
-3. **Artifact path**: run **Promote to Production** through to the export job.
+2. **Artifact path**: run **Promote to Production** through to the export job.
    **Expect**: the zip check passes and the uploaded `managed-solution` artifact, when
    downloaded and unzipped, contains no `environmentvariablevalues.json` and no address.
-4. **History**: `gitleaks git` over the full history reports no email-address findings.
+3. **History**: `gitleaks git` over the full history reports no email-address findings.
 
 ## I. Unattended overnight check
 
 Leave the flow on for one night with at least one seeded Medication due the next day.
 
 **Expect**: a Reminder Run for the new day with outcome Sent, created within 15 minutes of
-local midnight, and exactly one email. Runs at 01:00–03:00 either do not appear or end at
+local midnight, and exactly one message. Runs at 01:00–03:00 either do not appear or end at
 the guard.
 
 ## Definition of done for this feature

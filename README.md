@@ -17,7 +17,7 @@ MedTrack is a **React 19 + TypeScript Power Apps Code App** backed by **Microsof
 | **Calendar** | Month view with colour-coded dose history; tap any day to log or edit |
 | **Analytics** | Adherence trend charts across 3-month, 6-month, and 1-year windows; CSV export |
 | **Medications** | Add, edit, deactivate, and archive medications; Active / Inactive grouping; last taken and next intake on every card |
-| **Daily email** | One email a day listing what is due, with follow-ups for a week after a missed intake |
+| **Daily reminder** | One Teams message a day listing what is due, with follow-ups for a week after a missed intake |
 
 **Adherence is computed from first principles** — `Taken ÷ non-Skipped`. *Skipped* is deliberately neutral: a clinical choice that doesn't count for or against the user. That's an [Architecture Decision Record](docs/adr/0001-skipped-doses-neutral.md), not an accident.
 
@@ -92,43 +92,39 @@ Manual promotion
 
 ---
 
-## Daily email reminder
+## Daily reminder
 
-A scheduled cloud flow, **MedTrack – Daily Reminder**, checks once a day at local midnight and sends one email:
+A scheduled cloud flow, **MedTrack – Daily Reminder**, checks once a day at local midnight and posts one message in Microsoft Teams, as a chat from the Flow bot (shown as "Workflows"). With Teams on your phone, that is a notification:
 
 - **Due today** — every Active Medication due that day. Injections count from the last dose; everything else follows its fixed schedule.
 - **Follow-ups** — a Medication whose intake was missed, on the 1st, 3rd, 5th and 7th day afterwards. Logging it as Taken or Skipped stops the follow-ups.
 
-Nothing due and nothing missed means no email. Switching a Medication to Inactive is the only reminder switch. The flow reads Medications and Intake Logs and never changes them. The rules are the same ones the Medications page uses; both are tested against one decision table in [`contracts/schedule-rules.contract.md`](specs/004-schedule-page-reminders/contracts/schedule-rules.contract.md).
+The first line holds counts only ("MedTrack: 2 due today, 1 follow-up"), so a lock-screen preview shows no Medication name. The message ends with an "Open MedTrack" link to the app.
+
+Nothing due and nothing missed means no message. Switching a Medication to Inactive is the only reminder switch. The flow reads Medications and Intake Logs and never changes them. The rules are the same ones the Medications page uses; both are tested against one decision table in [`contracts/schedule-rules.contract.md`](specs/004-schedule-page-reminders/contracts/schedule-rules.contract.md).
 
 ### One-time setup per environment
 
-1. Create a **Microsoft Dataverse** connection and an **Office 365 Outlook** connection, both signed in as the person whose Medications are tracked. That account needs an Exchange Online mailbox; the reminder is sent from it. Share each connection with the deployment service principal as "Can use".
-2. On the GitHub Environment (`dev`, `production`), set the variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_MAIL_ID` and `REMINDER_TIME_ZONE` (a Windows time zone name such as `Eastern Standard Time`).
-3. Deploy. The first deploy to a new environment brings in the flow and the environment variables, then stops at "Configure reminder flow": the flow cannot be turned on until it has an address to read.
-4. Set the reminder address:
+1. Create a **Microsoft Dataverse** connection and a **Microsoft Teams** connection, both signed in as the person whose Medications are tracked. Share each with the deployment service principal as "Can use".
+2. On the GitHub Environment (`dev`, `production`), set the variables `PP_CONN_DATAVERSE_ID`, `PP_CONN_TEAMS_ID` and `REMINDER_TIME_ZONE` (a Windows time zone name such as `Eastern Standard Time`). The app link is built from `PP_ENVIRONMENT_ID` and `PP_APP_ID`, which the pipeline already uses.
+3. Deploy. The deploy binds the connections, sets the time zone and the app link, and turns the flow on. Then open the flow's Details page and confirm it is not reported as unlicensed: the service principal owns the flow and the Dataverse connector is premium.
+4. Install Microsoft Teams on your phone, sign in with the same account, and allow notifications.
 
-   ```powershell
-   pwsh scripts/reminder/set-reminder-recipient.ps1 -EnvironmentUrl https://<your-org>.crm.dynamics.com
-   ```
+### No address is stored anywhere
 
-   The script asks for the address with hidden input and stores it as the value of the environment variable `ppa_ReminderRecipientEmail`. Run it again to change the address.
-5. Re-run the deploy; it turns the flow on. Then open the flow's Details page and confirm it is not reported as unlicensed: the service principal owns the flow and the Dataverse connector is premium.
+The message goes to the user behind the Dataverse connection. The flow reads that account from Dataverse at run time, so there is no reminder address to configure, and none in this repository, in the solution or in GitHub.
 
-### The reminder address stays out of this repository
+Earlier versions of this feature sent email, first through the Mail connector and then through Office 365 Outlook. The checks that kept an address out of this public repository are still in place:
 
-This repository is public, so the address is never written in it — not in a file, a commit message, an issue or a pull request. The only example address anywhere here is `reminder@example.com`.
-
-- The solution holds the **definition** of `ppa_ReminderRecipientEmail` and never its value. The script creates the value outside the solution, so a solution export cannot contain it.
-- The address does not pass through GitHub at all, not even as a secret.
-- CI rejects a committed email address (gitleaks rule `email-address`) and an environment variable value in `solution/src`. The production promotion checks the exported solution zip again before it is uploaded as an artifact.
+- CI rejects a committed email address (gitleaks rule `email-address`) and an environment variable value in `solution/src`. The solution holds variable **definitions** only.
+- The production promotion checks the exported solution zip again before it is uploaded as an artifact.
 
 ### Good to know
 
-- **A changed address can take up to an hour to apply.** The next run may still use the old one.
-- **The first email may land in junk.** The reminder is sent from the mailbox behind the Office 365 Outlook connection. Mark the sender as safe once, or add it to your contacts. A copy of each reminder stays in that mailbox's Sent Items.
-- **A failed check does not email anyone.** Power Automate sends failure notices to the flow's owner, and the owner is a service principal. The record of each day is a row in the **Reminder Run** table (`ppa_reminderrun`) — outcome Sent, Nothing To Send or Failed, with the step that failed — and the flow's run history. A day with no row at all means the flow could not reach Dataverse.
-- **At most one email a day.** A second run on the same day stops at the Reminder Run row. A failed run is retried on the hour until 03:00 local time.
+- **Teams holds back phone notifications while you are active in Teams on a computer.** The message is in the chat either way.
+- **A failed check notifies nobody.** Power Automate sends failure notices to the flow's owner, and the owner is a service principal. The record of each day is a row in the **Reminder Run** table (`ppa_reminderrun`) — outcome Sent, Nothing To Send or Failed, with the step that failed — and the flow's run history. A day with no row at all means the flow could not reach Dataverse.
+- **At most one message a day.** A second run on the same day stops at the Reminder Run row. A failed run is retried on the hour until 03:00 local time.
+- **Testing by hand works only in the first four hours of the local day.** The flow's Run button obeys the same time gate as the schedule.
 
 ---
 
@@ -147,7 +143,7 @@ src/
 specs/                  # Spec Kit artifacts — the paper trail for every feature
 docs/adr/               # Architecture Decision Records
 solution/               # Dataverse schema as an unpacked, source-controlled solution
-scripts/reminder/       # Scripts the owner runs by hand: reminder address, schema, test scenarios
+scripts/reminder/       # Scripts the owner runs by hand: reminder schema, test scenarios
 .github/workflows/      # CI/CD pipeline
 ```
 

@@ -16,12 +16,12 @@ below were checked against `.claude/skills/dataverse-web-api/resources/dataverse
 | Column | Used for |
 |---|---|
 | `ppa_medicationid` | Key; filter on intake logs |
-| `ppa_name`, `ppa_dosage` | Email content |
+| `ppa_name`, `ppa_dosage` | Reminder content |
 | `ppa_method` | `894250001` Injection → rolling schedule; all others → fixed |
 | `ppa_frequency` | `894250000` Daily (1 day), `894250001` Weekly (7), `894250002` Biweekly (14), `894250003` As-Needed (never due) |
 | `ppa_scheduledday` | Fixed-schedule weekday for Weekly and Biweekly (`894250000` Monday … `894250006` Sunday) |
 | `ppa_startdate`, `createdon` | Biweekly anchor (`ppa_startdate`, else `createdon`); also the earliest date an intake can count as missed |
-| `ppa_remindertime` | Shown in the email (`HH:mm`) |
+| `ppa_remindertime` | Shown in the reminder (`HH:mm`) |
 | `ppa_isactive` | The only reminder switch (FR-015) |
 | `statecode` | `0` only; Archived rows are excluded |
 | `_ownerid_value` | Flow filter: the connection user's own Medications (research R11) |
@@ -74,16 +74,16 @@ No column ever holds the reminder address.
 | Value | Label | Meaning |
 |---|---|---|
 | `894250000` | Started | Row created; work in progress or interrupted |
-| `894250001` | Sent | Email accepted by the connector |
+| `894250001` | Sent | Message accepted by the connector |
 | `894250002` | Nothing To Send | Nothing due and no follow-up owed |
-| `894250003` | Failed | The check or the send failed **before** an email was accepted |
+| `894250003` | Failed | The check or the send failed **before** a message was accepted |
 
 ### State transitions
 
 ```text
 (no row) ──create──▶ Started ──nothing listed──▶ Nothing To Send   (final)
                         │
-                        ├──email accepted──▶ Sent                  (final)
+                        ├─message accepted─▶ Sent                  (final)
                         │
                         └──error before send accepted──▶ Failed ──retry (next hourly run)──▶ Started
 ```
@@ -91,7 +91,7 @@ No column ever holds the reminder address.
 - A later run on the same day proceeds **only** when the existing row is `Failed`.
 - `Started`, `Sent` and `Nothing To Send` all end a later run immediately.
 - A row stuck at `Started` means a run was interrupted after it may have sent. It is not
-  retried, which keeps the guarantee at "never two emails" rather than "always one".
+  retried, which keeps the guarantee at "never two messages" rather than "always one".
 - Retries stop after the 03:00 local run (research R5); the row then stays `Failed`.
 
 ### Validation rules
@@ -112,11 +112,14 @@ Rows are small and one per day (about 365 a year). No clean-up job is planned.
 
 | Schema name | Type | Default in solution | Current value | Purpose |
 |---|---|---|---|---|
-| `ppa_ReminderRecipientEmail` | Text | **None** | Set per environment by the owner, outside the solution (research R8) | The reminder address (FR-028 to FR-031) |
 | `ppa_ReminderTimeZone` | Text | `UTC` | Set per environment through the deployment settings file | Windows time zone name that defines "today" and "midnight" (FR-014) |
+| `ppa_MedTrackAppUrl` | Text | `not-configured` | Set per environment through the deployment settings file, from the environment id and app id | Address of the app, added to the reminder as a link; the link is left out unless the value starts with `https://` |
 
 Rule: `solution/src` must never contain an `environmentvariablevalues.json` file. CI
 enforces this (research R9).
+
+Removed on 2026-10-05: `ppa_ReminderRecipientEmail`. The reminder became a Teams message to
+the Dataverse connection's own user, so there is no address to store (research R7, R8).
 
 ---
 
@@ -124,8 +127,8 @@ enforces this (research R9).
 
 | Schema name | Connector | Used for |
 |---|---|---|
-| `ppa_MedTrackDataverse` | Microsoft Dataverse (`shared_commondataserviceforapps`) | List Medications and Intake Logs, create/update Reminder Run |
-| `ppa_MedTrackMail` | Office 365 Outlook (`shared_office365`) | Send the reminder email from the owner's mailbox |
+| `ppa_MedTrackDataverse` | Microsoft Dataverse (`shared_commondataserviceforapps`) | List Medications and Intake Logs, create/update Reminder Run, read the connection's own user |
+| `ppa_MedTrackTeams` | Microsoft Teams (`shared_teams`) | Post the reminder to the owner as the Flow bot |
 
 Connections are created by the owner in each environment and are never source-controlled.
 Their ids reach the import step through GitHub Environment variables (see

@@ -1,6 +1,6 @@
 #Requires -Version 7.0
 <#
-Fails when solution content could publish the reminder address
+Fails when solution content could publish an environment's settings or an address
 (specs/004-schedule-page-reminders/contracts/privacy-and-deployment.contract.md):
 
   1. any environmentvariablevalues.json file -- environment variable *values*

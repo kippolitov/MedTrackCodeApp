@@ -35,7 +35,7 @@
 
 .PARAMETER AllowNonDev
   Required to seed any environment other than the default one. The seed adds
-  33 test Medications, and the daily reminder would email them.
+  33 test Medications, and the daily reminder would list them.
 
 .EXAMPLE
   pwsh scripts/reminder/seed-reminder-scenarios.ps1

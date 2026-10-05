@@ -31,13 +31,13 @@ validation scripts, per repository convention.
 
 **Primary Dependencies**: Unchanged app stack — TanStack Query 5, shadcn/ui on Radix,
 Tailwind 4, date-fns 4, Lucide, PAC-generated Dataverse services (`src/generated/`).
-Platform: Microsoft Dataverse connector, Office 365 Outlook connector, `pac` CLI,
+Platform: Microsoft Dataverse connector, Microsoft Teams connector, `pac` CLI,
 `microsoft/powerplatform-actions`, gitleaks. **No new npm dependencies.**
 
 **Storage**: Dataverse. Reads `ppa_medication` and `ppa_intakelog` (no schema change).
 Adds table `ppa_ReminderRun`, environment variable definitions
-`ppa_ReminderRecipientEmail` and `ppa_ReminderTimeZone`, and connection references
-`ppa_MedTrackDataverse` and `ppa_MedTrackMail`. See [data-model.md](./data-model.md).
+`ppa_ReminderTimeZone` and `ppa_MedTrackAppUrl`, and connection references
+`ppa_MedTrackDataverse` and `ppa_MedTrackTeams`. See [data-model.md](./data-model.md).
 
 **Testing**: Vitest + Testing Library with `vi.mock` of the generated services (existing
 pattern) for the module, hook, component and page, plus one live check of the two new
@@ -67,8 +67,9 @@ intake-log queries use `staleTime` ≤ 30 s. Cross-platform: every script is `.p
 
 **Unknowns**: None block planning. The owner settled the three open choices on
 2026-10-05: try the time-zone environment variable in the trigger condition (research R5),
-use the Mail connector (R7; replaced by Office 365 Outlook the same day, when the Mail
-connector turned out to be blocked in this tenant), and keep the deployment service principal as the flow owner
+use the Mail connector (R7; replaced the same day, first by Office 365 Outlook and then by
+a Microsoft Teams message, after the Mail connector turned out to be blocked in this tenant
+and the owner's mail provider refused the tenant's email), and keep the deployment service principal as the flow owner
 (R10). Two points still need a check in dev, each with a stated fallback: whether the
 trigger condition can read the environment variable, and whether the
 service-principal-owned flow is reported as unlicensed because it uses the premium
@@ -173,7 +174,6 @@ scripts/
 │   └── configure-reminder-flow.ps1    # NEW  confirm service-principal owner, turn on
 └── reminder/
     ├── create-reminder-schema.ps1     # NEW  table, variable definitions, connection references
-    ├── set-reminder-recipient.ps1     # NEW  local only; prompts for the address
     ├── seed-reminder-scenarios.ps1    # NEW  decision table → dev, dates relative to today
     └── assert-reminder-run.ps1        # NEW  checks today's ppa_ReminderRun
 
@@ -220,7 +220,7 @@ The owner confirmed the fix and it is already implemented on this branch.
 | Service-principal-owned flow is flagged as unlicensed (premium Dataverse connector) | Medium | Flow suspended; no emails | Check the flow's Details page in increment 2; designate the owner as licensed user, or assign a Process licence (research R10) |
 | Flow is left turned off after import | Low | No emails | `configure-reminder-flow.ps1` fails the deploy if the flow is not on |
 | Nobody receives Power Automate's failure emails (owner is a service principal) | Certain | A failed check is noticed only if the owner looks | `ppa_ReminderRun` records every outcome; a missing row for a day is itself the signal; noted in README |
-| Email lands in junk at the recipient (sent from a new tenant's mailbox) | Medium | Reminder not seen | Check on first run; owner marks sender as safe; noted in README |
+| Reminder not noticed (first as email refused by the recipient's provider — this happened; now as a Teams notification held back while the user is active on a computer) | Medium | Reminder not seen | Delivery moved to Teams (R7); the message stays in the chat; noted in README |
 | Changed address takes up to an hour to apply | Certain | Next run may use the old address | Documented in quickstart.md and README |
 
 ## Complexity Tracking

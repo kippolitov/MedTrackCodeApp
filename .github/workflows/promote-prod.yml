@@ -57,8 +57,10 @@ jobs:
         shell: pwsh
         env:
           PP_CONN_DATAVERSE_ID: ${{ vars.PP_CONN_DATAVERSE_ID }}
-          PP_CONN_MAIL_ID: ${{ vars.PP_CONN_MAIL_ID }}
+          PP_CONN_TEAMS_ID: ${{ vars.PP_CONN_TEAMS_ID }}
           REMINDER_TIME_ZONE: ${{ vars.REMINDER_TIME_ZONE }}
+          PP_ENVIRONMENT_ID: ${{ vars.PP_ENVIRONMENT_ID }}
+          PP_APP_ID: ${{ vars.PP_APP_ID }}
         run: ./scripts/ci/render-deployment-settings.ps1
 
       - name: Sync dev to source-controlled solution
@@ -93,7 +95,7 @@ jobs:
 
       # Must stay BEFORE the upload below. The artifact of a public
       # repository is downloadable, so this is the step that stops an
-      # environment variable value (the reminder address) or any other email
+      # environment variable value (the time zone, the app link) or any email
       # address from being published with the solution (spec 004, FR-028).
       - name: Check exported solution for environment variable values
         shell: pwsh
@@ -159,8 +161,10 @@ jobs:
         shell: pwsh
         env:
           PP_CONN_DATAVERSE_ID: ${{ vars.PP_CONN_DATAVERSE_ID }}
-          PP_CONN_MAIL_ID: ${{ vars.PP_CONN_MAIL_ID }}
+          PP_CONN_TEAMS_ID: ${{ vars.PP_CONN_TEAMS_ID }}
           REMINDER_TIME_ZONE: ${{ vars.REMINDER_TIME_ZONE }}
+          PP_ENVIRONMENT_ID: ${{ vars.PP_ENVIRONMENT_ID }}
+          PP_APP_ID: ${{ vars.PP_APP_ID }}
         run: ./scripts/ci/render-deployment-settings.ps1
 
       - name: Import solution (Managed)

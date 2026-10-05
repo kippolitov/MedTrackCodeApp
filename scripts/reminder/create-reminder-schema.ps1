@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-  Creates the Dataverse components the daily email reminder needs, inside
+  Creates the Dataverse components the daily reminder needs, inside
   MedTrackSolution, using the current Azure CLI user session.
 
 .DESCRIPTION
@@ -14,24 +14,32 @@
     Table                 ppa_ReminderRun (user-owned; notes, activities and
                           auditing off), its columns and the alternate key
                           ppa_reminderrun_date on ppa_name
-    Environment variables ppa_ReminderRecipientEmail (definition only -- no
-                          default and no value), ppa_ReminderTimeZone
-                          (default UTC)
-    Connection references ppa_MedTrackDataverse, ppa_MedTrackMail
+    Environment variables ppa_ReminderTimeZone (default UTC),
+                          ppa_MedTrackAppUrl (default "not-configured": the
+                          reminder carries no link until a value is set)
+    Connection references ppa_MedTrackDataverse, ppa_MedTrackTeams
 
   Table name, column types and ownership type are permanent in Dataverse.
 
-  The reminder address itself is never handled here. Set it per environment
-  with scripts/reminder/set-reminder-recipient.ps1.
+  The reminder is a Teams message to the user behind the Dataverse
+  connection, so no address is configured anywhere.
 
 .PARAMETER EnvironmentUrl
   Power Platform environment URL. Defaults to MedTrackDev.
+
+.PARAMETER RemoveRetired
+  Also removes what the email version of the reminder used and the Teams
+  version does not: connection reference ppa_MedTrackMail and environment
+  variable ppa_ReminderRecipientEmail, including its stored value. Run this
+  only after the flow has been updated; Dataverse refuses to delete a
+  component the flow still uses.
 
 .EXAMPLE
   pwsh scripts/reminder/create-reminder-schema.ps1
 #>
 param(
-    [string]$EnvironmentUrl = 'https://org9c89b427.crm.dynamics.com'
+    [string]$EnvironmentUrl = 'https://org9c89b427.crm.dynamics.com',
+    [switch]$RemoveRetired
 )
 
 $ErrorActionPreference = 'Stop'
@@ -251,21 +259,22 @@ if ($keyStatus -ne 'Active') {
 Write-Host "  ✓ alternate key $keyName is Active"
 
 # ── 4. Environment variable definitions ──────────────────────────────────────
-# ppa_ReminderRecipientEmail deliberately has no default value and no current
-# value here: the address must never be a component of the solution.
+# Both have a default, so the flow can be turned on before a value is set.
+# Current values are set per environment and are never part of the solution.
 $variables = @(
-    @{
-        schemaname  = 'ppa_ReminderRecipientEmail'
-        displayname = 'Reminder Recipient Email'
-        description = 'Address the daily reminder is sent to. Set per environment with scripts/reminder/set-reminder-recipient.ps1; never give it a default value.'
-        type        = 100000000
-    }
     @{
         schemaname   = 'ppa_ReminderTimeZone'
         displayname  = 'Reminder Time Zone'
         description  = 'Windows time zone name that defines "today" and "midnight" for the daily reminder.'
         type         = 100000000
         defaultvalue = 'UTC'
+    }
+    @{
+        schemaname   = 'ppa_MedTrackAppUrl'
+        displayname  = 'MedTrack App URL'
+        description  = 'Address of the MedTrack app in this environment, added to the daily reminder as a link. The link is left out unless the value starts with https://.'
+        type         = 100000000
+        defaultvalue = 'not-configured'
     }
 )
 
@@ -288,40 +297,48 @@ $connectionReferences = @(
         connectorid                    = '/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps'
     }
     @{
-        connectionreferencelogicalname = 'ppa_MedTrackMail'
-        connectionreferencedisplayname = 'MedTrack Mail'
-        description                    = 'Office 365 Outlook connection used to send the daily reminder.'
-        connectorid                    = '/providers/Microsoft.PowerApps/apis/shared_office365'
+        connectionreferencelogicalname = 'ppa_MedTrackTeams'
+        connectionreferencedisplayname = 'MedTrack Teams'
+        description                    = 'The owner''s Microsoft Teams connection used to post the daily reminder.'
+        connectorid                    = '/providers/Microsoft.PowerApps/apis/shared_teams'
     }
 )
 
 foreach ($reference in $connectionReferences) {
     $name     = $reference.connectionreferencelogicalname
-    $existing = Get-DVOrNull ("$apiBase/connectionreferences?" + '$select=connectionreferenceid,connectorid&$filter=' + "connectionreferencelogicalname eq '$name'")
+    $existing = Get-DVOrNull ("$apiBase/connectionreferences?" + '$select=connectionreferenceid&$filter=' + "connectionreferencelogicalname eq '$name'")
     if ($existing.value.Count -gt 0) {
-        $current = $existing.value[0]
-        if ($current.connectorid -eq $reference.connectorid) {
-            Write-Host "  = connection reference $name already exists"
-            continue
-        }
-        # Created for another connector (the Mail connector, before it was replaced).
-        # The old connection stays attached until the owner picks a new one.
-        try {
-            Invoke-RestMethod -Method Patch -Uri "$apiBase/connectionreferences($($current.connectionreferenceid))" -Headers $writeHeaders -Body (@{
-                connectorid = $reference.connectorid
-                description = $reference.description
-            } | ConvertTo-Json -Compress) | Out-Null
-        } catch {
-            throw "Could not move connection reference $name to $($reference.connectorid): $(Get-DVErrorReason $_)"
-        }
-        Write-Host "  ✓ connection reference $name moved to $($reference.connectorid) — pick a connection for it"
+        Write-Host "  = connection reference $name already exists"
         continue
     }
     New-DV -Uri "$apiBase/connectionreferences" -What "connection reference $name" -Body $reference
     Write-Host "  ✓ connection reference $name"
 }
 
-# ── 6. Publish ───────────────────────────────────────────────────────────────
+# ── 6. Retired components (only with -RemoveRetired) ────────────────────────
+if ($RemoveRetired) {
+    Write-Host "→ Removing components of the email version..."
+    $retired = @(
+        @{ Set = 'connectionreferences';           Id = 'connectionreferenceid';           Filter = "connectionreferencelogicalname eq 'ppa_MedTrackMail'"; What = 'connection reference ppa_MedTrackMail' }
+        # Deleting the definition also deletes its value: the stored address.
+        @{ Set = 'environmentvariabledefinitions'; Id = 'environmentvariabledefinitionid'; Filter = "schemaname eq 'ppa_ReminderRecipientEmail'";            What = 'environment variable ppa_ReminderRecipientEmail and its value' }
+    )
+    foreach ($item in $retired) {
+        $found = Get-DVOrNull ("$apiBase/$($item.Set)?" + '$select=' + $item.Id + '&$filter=' + $item.Filter)
+        if ($found.value.Count -eq 0) {
+            Write-Host "  = $($item.What): not present"
+            continue
+        }
+        try {
+            Invoke-RestMethod -Method Delete -Uri "$apiBase/$($item.Set)($($found.value[0].($item.Id)))" -Headers $readHeaders | Out-Null
+        } catch {
+            throw "Could not remove $($item.What): $(Get-DVErrorReason $_). If the flow still uses it, update the flow first."
+        }
+        Write-Host "  ✓ removed $($item.What)"
+    }
+}
+
+# ── 7. Publish ───────────────────────────────────────────────────────────────
 Write-Host "→ Publishing..."
 try {
     Invoke-RestMethod -Method Post -Uri "$apiBase/PublishXml" -Headers $writeHeaders -Body (@{
@@ -335,6 +352,6 @@ Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "✓  Reminder schema is in place in $solutionName."
 Write-Host ""
-Write-Host "   Next: the owner creates the two connections and runs"
-Write-Host "   scripts/reminder/set-reminder-recipient.ps1 (tasks T028, T029)."
+Write-Host "   Next: the owner creates a Microsoft Dataverse and a Microsoft Teams"
+Write-Host "   connection and picks them for the two connection references."
 Write-Host ""

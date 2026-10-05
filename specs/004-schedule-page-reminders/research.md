@@ -214,11 +214,58 @@ without reading an inbox.
 
 ---
 
-## R7. Which email connector
+## R7. How the reminder is delivered
 
-**Decision (changed 2026-10-05)**: The **Office 365 Outlook** connector, action **Send an
-email (V2)**, through connection reference `ppa_MedTrackMail`. Secure Inputs and Secure
-Outputs are switched on for the send action so the address does not appear in run history.
+**Decision (final, 2026-10-05, owner's choice)**: a **Microsoft Teams** message. The flow
+posts as the Flow bot (shown in Teams as "Workflows") in a one-to-one chat with the owner,
+through connection reference `ppa_MedTrackTeams`, action *Post message in a chat or
+channel*. With Teams on the owner's phone this is a push notification, which is what the
+owner wants from the feature. The message ends with a link to the app.
+
+**Why not email, after two attempts**:
+- The Mail connector is refused for new tenants (below).
+- Office 365 Outlook sent correctly, but the owner's mail provider refused every message
+  at its own server: `554 5.7.1 … Message rejected due to local policy`, visible in the
+  Exchange message trace as "Not delivered". The four test messages never reached the
+  inbox or the junk folder. A brand-new developer tenant sending from its
+  `onmicrosoft.com` address has no sender reputation, and nothing in the flow can change
+  that.
+- The alternatives that would have delivered email (an Outlook.com sender, SMTP through
+  another mail provider, the Gmail connector with a self-registered Google client app) all
+  add an account or a stored secret for something a Teams message does with neither.
+
+**What the choice changes**:
+- **No address is stored.** The flow reads the user behind its Dataverse connection
+  (`systemusers`, `EqualUserId(PropertyName='systemuserid')`, column `domainname`) on each
+  run and posts to that user. `ppa_ReminderRecipientEmail`, its script and the
+  `ValidateRecipient` step are removed (R8).
+- **Layout**: the first line is the old subject, counts only, so a lock-screen preview
+  shows no Medication name; then the two sections; then the link.
+- **App link**: the app's address contains the environment id and the app id, so it is not
+  written in the flow or the repository. It is the value of a new environment variable,
+  `ppa_MedTrackAppUrl` (default `not-configured`, which leaves the link out), rendered into
+  the deployment settings from `PP_ENVIRONMENT_ID` and `PP_APP_ID`, which the pipeline
+  already has. The code app is not a Dataverse record in this environment (`canvasapps`
+  has no row for it), so its id cannot be looked up at run time.
+- **Run history**: the lookup has Secure Outputs on; the post has Secure Inputs and Secure
+  Outputs on.
+- **Pipeline variable** `PP_CONN_MAIL_ID` becomes `PP_CONN_TEAMS_ID`.
+
+**Verified in dev (2026-10-05)**: a sample message and then a real run. Teams returned
+HTTP 201, the message appeared in the Workflows chat, the owner's phone showed the
+notification, the Reminder Run recorded outcome Sent with the right due count, and the
+account name could not be opened from run history. One thing to know: Teams holds back
+phone notifications while the user is active in Teams on a computer.
+
+**Not yet verified**: the Teams connection shared with the deployment service principal
+(the pipeline path), and the flow bot's behaviour when the service principal owns the flow.
+
+The earlier decisions follow, kept as the record of what was tried.
+
+**Second decision (2026-10-05, replaced the same day)**: The **Office 365 Outlook**
+connector, action **Send an email (V2)**, through connection reference `ppa_MedTrackMail`.
+Secure Inputs and Secure Outputs were switched on for the send action so the address did
+not appear in run history.
 
 **Rationale**:
 - It works in this tenant today. The owner's account holds a Developer E5 licence with an
@@ -281,7 +328,15 @@ name and status code, never the error text (R9).
 
 ## R8. Where the reminder address lives
 
-**Decision**: A Text environment variable, `ppa_ReminderRecipientEmail`. The solution
+**Superseded on 2026-10-05**: there is no reminder address any more. The reminder is a
+Teams message to the user behind the Dataverse connection (R7), so
+`ppa_ReminderRecipientEmail` and `scripts/reminder/set-reminder-recipient.ps1` were
+removed, and with them the open question below about a variable with no value. What
+remains from this decision is the rule it rested on: environment variable **values** are
+never part of the solution. It now protects the time zone and the app link. The original
+decision is kept below as a record.
+
+**Original decision**: A Text environment variable, `ppa_ReminderRecipientEmail`. The solution
 contains the **definition only**: no default value and no current value. The owner sets the
 current value once per environment by running a local script that prompts for it and
 creates the `environmentvariablevalue` row **without** the `MSCRM.SolutionUniqueName`

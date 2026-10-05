@@ -10,13 +10,13 @@
           "name": "shared_commondataserviceforapps"
         }
       },
-      "shared_office365": {
+      "shared_teams": {
         "runtimeSource": "embedded",
         "connection": {
-          "connectionReferenceLogicalName": "ppa_MedTrackMail"
+          "connectionReferenceLogicalName": "ppa_MedTrackTeams"
         },
         "api": {
-          "name": "shared_office365"
+          "name": "shared_teams"
         }
       }
     },
@@ -39,11 +39,11 @@
             "schemaName": "ppa_ReminderTimeZone"
           }
         },
-        "ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)": {
-          "defaultValue": "",
+        "ppa_MedTrackAppUrl (ppa_MedTrackAppUrl)": {
+          "defaultValue": "not-configured",
           "type": "String",
           "metadata": {
-            "schemaName": "ppa_ReminderRecipientEmail"
+            "schemaName": "ppa_MedTrackAppUrl"
           }
         }
       },
@@ -107,12 +107,12 @@
             ]
           }
         },
-        "Initialize_EmailAccepted": {
+        "Initialize_MessageAccepted": {
           "type": "InitializeVariable",
           "inputs": {
             "variables": [
               {
-                "name": "EmailAccepted",
+                "name": "MessageAccepted",
                 "type": "boolean",
                 "value": false
               }
@@ -143,7 +143,7 @@
             "authentication": "@parameters('$authentication')"
           },
           "runAfter": {
-            "Initialize_EmailAccepted": [
+            "Initialize_MessageAccepted": [
               "Succeeded"
             ]
           }
@@ -264,18 +264,6 @@
         "Check_and_send": {
           "type": "Scope",
           "actions": {
-            "ValidateRecipient": {
-              "type": "Compose",
-              "inputs": "@substring('ok', 0, if(and(greater(indexOf(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), '')), '@'), 0), equals(indexOf(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), '')), '@'), lastIndexOf(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), '')), '@')), greater(lastIndexOf(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), '')), '.'), add(indexOf(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), '')), '@'), 1)), less(lastIndexOf(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), '')), '.'), sub(length(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), ''))), 2)), not(contains(trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), '')), ' '))), 2, 3))",
-              "runAfter": {},
-              "runtimeConfiguration": {
-                "secureData": {
-                  "properties": [
-                    "inputs"
-                  ]
-                }
-              }
-            },
             "LoadMedications": {
               "type": "OpenApiConnection",
               "inputs": {
@@ -291,11 +279,7 @@
                 },
                 "authentication": "@parameters('$authentication')"
               },
-              "runAfter": {
-                "ValidateRecipient": [
-                  "Succeeded"
-                ]
-              }
+              "runAfter": {}
             },
             "ForEachMedication": {
               "type": "Foreach",
@@ -544,7 +528,7 @@
             },
             "Body": {
               "type": "Compose",
-              "inputs": "@concat(if(greater(length(variables('DueItems')), 0), concat('<h3>Due today</h3><ul>', join(body('DueLines'), ''), '</ul>'), ''), if(greater(length(variables('FollowUpItems')), 0), concat('<h3>Follow-ups</h3><ul>', join(body('FollowUpLines'), ''), '</ul>'), ''))",
+              "inputs": "@concat('<p><strong>', outputs('Subject'), '</strong></p>', if(greater(length(variables('DueItems')), 0), concat('<p><strong>Due today</strong></p><ul>', join(body('DueLines'), ''), '</ul>'), ''), if(greater(length(variables('FollowUpItems')), 0), concat('<p><strong>Follow-ups</strong></p><ul>', join(body('FollowUpLines'), ''), '</ul>'), ''), if(startsWith(toLower(coalesce(parameters('ppa_MedTrackAppUrl (ppa_MedTrackAppUrl)'), '')), 'https://'), concat('<p><a href=\"', parameters('ppa_MedTrackAppUrl (ppa_MedTrackAppUrl)'), '\">Open MedTrack</a></p>'), ''))",
               "runAfter": {
                 "Subject": [
                   "Succeeded"
@@ -569,23 +553,52 @@
                 ]
               },
               "actions": {
-                "SendEmail": {
+                "Me": {
                   "type": "OpenApiConnection",
                   "inputs": {
                     "host": {
-                      "connectionName": "shared_office365",
-                      "operationId": "SendEmailV2",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                     },
                     "parameters": {
-                      "emailMessage/To": "@trim(coalesce(parameters('ppa_ReminderRecipientEmail (ppa_ReminderRecipientEmail)'), ''))",
-                      "emailMessage/Subject": "@outputs('Subject')",
-                      "emailMessage/Body": "@outputs('Body')",
-                      "emailMessage/Importance": "Normal"
+                      "entityName": "systemusers",
+                      "$select": "domainname",
+                      "$filter": "Microsoft.Dynamics.CRM.EqualUserId(PropertyName='systemuserid')",
+                      "$top": 1
                     },
                     "authentication": "@parameters('$authentication')"
                   },
                   "runAfter": {},
+                  "runtimeConfiguration": {
+                    "secureData": {
+                      "properties": [
+                        "outputs"
+                      ]
+                    }
+                  }
+                },
+                "SendReminder": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                    },
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Chat with Flow bot",
+                      "body/recipient": "@first(body('Me')?['value'])?['domainname']",
+                      "body/messageBody": "@outputs('Body')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {
+                    "Me": [
+                      "Succeeded"
+                    ]
+                  },
                   "runtimeConfiguration": {
                     "secureData": {
                       "properties": [
@@ -595,14 +608,14 @@
                     }
                   }
                 },
-                "MarkEmailAccepted": {
+                "MarkMessageAccepted": {
                   "type": "SetVariable",
                   "inputs": {
-                    "name": "EmailAccepted",
+                    "name": "MessageAccepted",
                     "value": true
                   },
                   "runAfter": {
-                    "SendEmail": [
+                    "SendReminder": [
                       "Succeeded"
                     ]
                   }
@@ -626,7 +639,7 @@
                     "authentication": "@parameters('$authentication')"
                   },
                   "runAfter": {
-                    "MarkEmailAccepted": [
+                    "MarkMessageAccepted": [
                       "Succeeded"
                     ]
                   }
@@ -701,11 +714,11 @@
                 ]
               }
             },
-            "IfEmailNotAccepted": {
+            "IfMessageNotAccepted": {
               "type": "If",
               "expression": {
                 "equals": [
-                  "@variables('EmailAccepted')",
+                  "@variables('MessageAccepted')",
                   false
                 ]
               },

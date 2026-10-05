@@ -1,0 +1,14 @@
+<environmentvariabledefinition schemaname="ppa_MedTrackAppUrl">
+  <defaultvalue>not-configured</defaultvalue>
+  <description default="Address of the MedTrack app in this environment, added to the daily reminder as a link. The link is left out unless the value starts with https://.">
+    <label description="Address of the MedTrack app in this environment, added to the daily reminder as a link. The link is left out unless the value starts with https://." languagecode="1033" />
+  </description>
+  <displayname default="MedTrack App URL">
+    <label description="MedTrack App URL" languagecode="1033" />
+  </displayname>
+  <introducedversion>1.0.0.1</introducedversion>
+  <iscustomizable>1</iscustomizable>
+  <isrequired>0</isrequired>
+  <secretstore>0</secretstore>
+  <type>100000000</type>
+</environmentvariabledefinition>
