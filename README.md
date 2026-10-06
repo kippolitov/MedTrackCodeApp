@@ -71,6 +71,7 @@ All four workflows live in [`.github/workflows/`](.github/workflows/). Credentia
 ```
 Pull Request
   └── ci.yml ──► install → lint → type-check → build → test → secret scan → workflow lint
+             └─► e2e (parallel job): Playwright against the mock-data app
                   All must pass. Target: < 10 minutes with npm caching.
 
 Merge to main
@@ -169,6 +170,14 @@ Tests:
 
 ```bash
 npm run test
+```
+
+End-to-end tests (Playwright, against the mock-data app — no Power Platform needed):
+
+```bash
+npx playwright install chromium   # once per machine
+npm run test:e2e                  # headless
+npm run test:e2e:ui               # interactive runner
 ```
 
 CI build (matches the pipeline exactly — no deploy side-effects):

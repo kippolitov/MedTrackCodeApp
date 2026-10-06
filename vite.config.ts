@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import fs from 'fs'
 import path from 'path'
 import react from '@vitejs/plugin-react'
@@ -61,6 +61,8 @@ export default defineConfig(({ mode }) => {
       environment: 'happy-dom',
       globals: true,
       setupFiles: ['./tests/setup.ts'],
+      // e2e/ holds Playwright tests (`npm run test:e2e`), not Vitest ones.
+      exclude: [...configDefaults.exclude, 'e2e/**'],
       passWithNoTests: true,
       clearMocks: true,
     },
