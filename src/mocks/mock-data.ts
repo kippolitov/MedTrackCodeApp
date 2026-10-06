@@ -11,6 +11,10 @@
  *   - A weekly med scheduled on a non-today weekday → must NOT be flagged overdue (WR-001).
  *   - An injection med + logs with injection sites → exercises the body map.
  *   - ~4 weeks of mixed Taken/Missed/Skipped logs → adherence, streak, calendar dots, analytics.
+ *   - One Medications-page card of each schedule kind: due today (Metformin), upcoming
+ *     (Vitamin D), Past Due on the fixed schedule (Alendronate), Past Due on the rolling
+ *     schedule (Semaglutide), As-Needed (Ibuprofen) and Inactive with a past Taken log
+ *     (Lisinopril).
  */
 import type { Ppa_medications, Ppa_medicationsppa_scheduledday } from '@/generated/models/Ppa_medicationsModel'
 import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
@@ -43,6 +47,8 @@ function isoNoon(daysAgo: number): string {
 // Pick a weekday that is guaranteed NOT to be today, so the weekly med is never
 // scheduled "today" regardless of which day QA runs on (WR-001 stays demonstrable).
 const notTodayDayEnum = DOW_TO_ENUM[(new Date().getDay() + 2) % 7] as Ppa_medicationsppa_scheduledday
+// Yesterday's weekday: a weekly med on this day with no log yesterday is Past Due.
+const yesterdayDayEnum = DOW_TO_ENUM[(new Date().getDay() + 6) % 7] as Ppa_medicationsppa_scheduledday
 
 function med(p: Partial<Ppa_medications>): Ppa_medications {
   return {
@@ -85,6 +91,19 @@ export const medications: Ppa_medications[] = [
     ppa_medicationid: 'med-lisinopril', ppa_name: 'Lisinopril (discontinued)', ppa_dosage: '10 mg',
     ppa_frequency: Freq.Daily, ppa_method: Method.Pill, ppa_remindertime: '08:00',
     ppa_isactive: false, createdon: isoNoon(300), ppa_sortorder: 6,
+  }),
+  med({
+    // Weekly pill due yesterday, last taken 8 days ago → Past Due on the fixed schedule.
+    ppa_medicationid: 'med-alendronate', ppa_name: 'Alendronate', ppa_dosage: '70 mg',
+    ppa_frequency: Freq.Weekly, ppa_scheduledday: yesterdayDayEnum, ppa_method: Method.Pill,
+    ppa_remindertime: '07:30', ppa_instructions: 'Take on an empty stomach with a full glass of water.',
+    createdon: isoNoon(150), ppa_sortorder: 7,
+  }),
+  med({
+    // Weekly injection last taken 9 days ago → Past Due on the rolling schedule.
+    ppa_medicationid: 'med-semaglutide', ppa_name: 'Semaglutide', ppa_dosage: '0.5 mg',
+    ppa_frequency: Freq.Weekly, ppa_scheduledday: notTodayDayEnum, ppa_method: Method.Injection,
+    ppa_remindertime: '19:00', createdon: isoNoon(60), ppa_sortorder: 8,
   }),
 ]
 
@@ -130,6 +149,17 @@ function buildSeedLogs(): Ppa_intakelogs[] {
   // Adalimumab (biweekly injection): on its "on" weeks
   add('med-adalimumab', 'Adalimumab', dayAt(14, '20:05'), Status.Taken, SITES[1])
   add('med-adalimumab', 'Adalimumab', dayAt(28, '20:05'), Status.Taken, SITES[3])
+
+  // Alendronate (weekly pill): taken 8 and 15 days ago, missed yesterday's dose.
+  add('med-alendronate', 'Alendronate', dayAt(8, '07:35'), Status.Taken)
+  add('med-alendronate', 'Alendronate', dayAt(15, '07:35'), Status.Taken)
+
+  // Semaglutide (weekly injection): last taken 9 days ago, so two days past due.
+  add('med-semaglutide', 'Semaglutide', dayAt(9, '19:05'), Status.Taken, SITES[2])
+  add('med-semaglutide', 'Semaglutide', dayAt(16, '19:05'), Status.Taken, SITES[4])
+
+  // Lisinopril (inactive): a Taken log from before it was paused.
+  add('med-lisinopril', 'Lisinopril (discontinued)', dayAt(40, '08:05'), Status.Taken)
 
   // Older logs spanning earlier months so month/year navigation has data to show.
   for (const d of [45, 60, 75, 90]) {

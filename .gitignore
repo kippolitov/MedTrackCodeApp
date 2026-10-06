@@ -34,6 +34,7 @@ dist-ssr
 # Sensitive / environment-specific material — never committed (see
 # specs/003-github-actions-cicd/contracts/secrets-and-environments.contract.md)
 power.config.json
+solution/deployment-settings.json
 localhost*.pem
 *.pfx
 *.key

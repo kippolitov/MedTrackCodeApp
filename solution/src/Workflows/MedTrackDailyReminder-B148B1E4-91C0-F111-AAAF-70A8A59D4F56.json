@@ -1,0 +1,781 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "ppa_MedTrackDataverse"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_teams": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "ppa_MedTrackTeams"
+        },
+        "api": {
+          "name": "shared_teams"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "ppa_ReminderTimeZone (ppa_ReminderTimeZone)": {
+          "defaultValue": "UTC",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ppa_ReminderTimeZone"
+          }
+        },
+        "ppa_MedTrackAppUrl (ppa_MedTrackAppUrl)": {
+          "defaultValue": "not-configured",
+          "type": "String",
+          "metadata": {
+            "schemaName": "ppa_MedTrackAppUrl"
+          }
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Hour",
+            "interval": 1,
+            "startTime": "2026-01-01T00:00:00Z"
+          },
+          "conditions": [
+            {
+              "expression": "@contains(createArray('00', '01', '02', '03'), convertFromUtc(utcNow(), parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'HH'))"
+            }
+          ],
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          }
+        }
+      },
+      "actions": {
+        "Today": {
+          "type": "Compose",
+          "inputs": "@convertFromUtc(utcNow(), parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'yyyy-MM-dd')",
+          "runAfter": {}
+        },
+        "Initialize_DueItems": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DueItems",
+                "type": "array",
+                "value": []
+              }
+            ]
+          },
+          "runAfter": {
+            "Today": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_FollowUpItems": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "FollowUpItems",
+                "type": "array",
+                "value": []
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_DueItems": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_MessageAccepted": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "MessageAccepted",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_FollowUpItems": [
+              "Succeeded"
+            ]
+          }
+        },
+        "CreateRun": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "CreateRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "ppa_reminderruns",
+              "item/ppa_name": "@outputs('Today')",
+              "item/ppa_outcome": 894250000,
+              "item/ppa_duecount": 0,
+              "item/ppa_followupcount": 0,
+              "item/ppa_attempts": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runAfter": {
+            "Initialize_MessageAccepted": [
+              "Succeeded"
+            ]
+          }
+        },
+        "ReadExistingRun": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "ppa_reminderruns",
+              "$select": "ppa_reminderrunid,ppa_outcome,ppa_attempts",
+              "$filter": "ppa_name eq '@{outputs('Today')}'",
+              "$top": 1
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runAfter": {
+            "CreateRun": [
+              "Failed"
+            ]
+          }
+        },
+        "GuardDecision": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@first(body('ReadExistingRun')?['value'])?['ppa_outcome']",
+              894250003
+            ]
+          },
+          "actions": {
+            "RetryRun": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "ppa_reminderruns",
+                  "recordId": "@first(body('ReadExistingRun')?['value'])?['ppa_reminderrunid']",
+                  "item/ppa_outcome": 894250000,
+                  "item/ppa_attempts": "@add(coalesce(first(body('ReadExistingRun')?['value'])?['ppa_attempts'], 1), 1)",
+                  "item/ppa_errorstep": "@null"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {}
+            }
+          },
+          "else": {
+            "actions": {
+              "IfNoRunToday": {
+                "type": "If",
+                "expression": {
+                  "equals": [
+                    "@length(body('ReadExistingRun')?['value'])",
+                    0
+                  ]
+                },
+                "actions": {
+                  "GuardFailed": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Failed",
+                      "runError": {
+                        "code": "GuardFailed",
+                        "message": "The Reminder Run row could not be created or read."
+                      }
+                    },
+                    "runAfter": {}
+                  }
+                },
+                "else": {
+                  "actions": {
+                    "AlreadyRanToday": {
+                      "type": "Terminate",
+                      "inputs": {
+                        "runStatus": "Succeeded"
+                      },
+                      "runAfter": {}
+                    }
+                  }
+                },
+                "runAfter": {}
+              }
+            }
+          },
+          "runAfter": {
+            "ReadExistingRun": [
+              "Succeeded"
+            ]
+          }
+        },
+        "RunId": {
+          "type": "Compose",
+          "inputs": "@coalesce(body('CreateRun')?['ppa_reminderrunid'], first(coalesce(body('ReadExistingRun')?['value'], json('[]')))?['ppa_reminderrunid'])",
+          "runAfter": {
+            "CreateRun": [
+              "Succeeded",
+              "Failed"
+            ],
+            "ReadExistingRun": [
+              "Succeeded",
+              "Skipped"
+            ],
+            "GuardDecision": [
+              "Succeeded",
+              "Skipped"
+            ]
+          }
+        },
+        "Check_and_send": {
+          "type": "Scope",
+          "actions": {
+            "LoadMedications": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "ppa_medications",
+                  "$select": "ppa_medicationid,ppa_name,ppa_dosage,ppa_method,ppa_frequency,ppa_scheduledday,ppa_startdate,createdon,ppa_remindertime",
+                  "$filter": "statecode eq 0 and ppa_isactive eq true and ppa_frequency ne 894250003 and Microsoft.Dynamics.CRM.EqualUserId(PropertyName='ownerid')"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {}
+            },
+            "ForEachMedication": {
+              "type": "Foreach",
+              "foreach": "@body('LoadMedications')?['value']",
+              "actions": {
+                "LatestTaken": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ppa_intakelogs",
+                      "$select": "ppa_intakelogid,ppa_loggedat,ppa_status,ppa_injectionsite",
+                      "$filter": "_ppa_medication_value eq @{items('ForEachMedication')?['ppa_medicationid']} and ppa_status eq 894250000 and ppa_loggedat le @{utcNow()}",
+                      "$orderby": "ppa_loggedat desc",
+                      "$top": 1
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {}
+                },
+                "LatestSkipped": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ppa_intakelogs",
+                      "$select": "ppa_intakelogid,ppa_loggedat,ppa_status,ppa_injectionsite",
+                      "$filter": "_ppa_medication_value eq @{items('ForEachMedication')?['ppa_medicationid']} and ppa_status eq 894250001 and ppa_loggedat le @{utcNow()}",
+                      "$orderby": "ppa_loggedat desc",
+                      "$top": 1
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {
+                    "LatestTaken": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Facts": {
+                  "type": "Compose",
+                  "inputs": {
+                    "name": "@items('ForEachMedication')?['ppa_name']",
+                    "dosage": "@coalesce(items('ForEachMedication')?['ppa_dosage'], '')",
+                    "reminderTime": "@coalesce(items('ForEachMedication')?['ppa_remindertime'], '')",
+                    "isInjection": "@equals(items('ForEachMedication')?['ppa_method'], 894250001)",
+                    "frequency": "@items('ForEachMedication')?['ppa_frequency']",
+                    "interval": "@if(equals(items('ForEachMedication')?['ppa_frequency'], 894250000), 1, if(equals(items('ForEachMedication')?['ppa_frequency'], 894250001), 7, 14))",
+                    "hasScheduledDay": "@not(equals(items('ForEachMedication')?['ppa_scheduledday'], null))",
+                    "scheduledWeekday": "@mod(add(sub(coalesce(items('ForEachMedication')?['ppa_scheduledday'], 894250000), 894250000), 1), 7)",
+                    "todayNumber": "@div(ticks(outputs('Today')), 864000000000)",
+                    "anchorNumber": "@div(ticks(substring(coalesce(items('ForEachMedication')?['ppa_startdate'], convertFromUtc(items('ForEachMedication')?['createdon'], parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'yyyy-MM-dd')), 0, 10)), 864000000000)",
+                    "hasTaken": "@greater(length(body('LatestTaken')?['value']), 0)",
+                    "hasSkipped": "@greater(length(body('LatestSkipped')?['value']), 0)",
+                    "takenNumber": "@div(ticks(convertFromUtc(coalesce(first(body('LatestTaken')?['value'])?['ppa_loggedat'], '1900-01-01T12:00:00Z'), parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'yyyy-MM-dd')), 864000000000)",
+                    "skippedNumber": "@div(ticks(convertFromUtc(coalesce(first(body('LatestSkipped')?['value'])?['ppa_loggedat'], '1900-01-01T12:00:00Z'), parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'yyyy-MM-dd')), 864000000000)",
+                    "takenAt": "@coalesce(first(body('LatestTaken')?['value'])?['ppa_loggedat'], '1900-01-01T12:00:00Z')",
+                    "takenSite": "@coalesce(first(body('LatestTaken')?['value'])?['ppa_injectionsite@OData.Community.Display.V1.FormattedValue'], '')"
+                  },
+                  "runAfter": {
+                    "LatestSkipped": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Schedule": {
+                  "type": "Compose",
+                  "inputs": {
+                    "rolling": "@and(outputs('Facts')?['isInjection'], or(outputs('Facts')?['hasTaken'], outputs('Facts')?['hasSkipped']))",
+                    "resolvedNumber": "@max(outputs('Facts')?['takenNumber'], outputs('Facts')?['skippedNumber'])",
+                    "scheduledToday": "@if(equals(outputs('Facts')?['frequency'], 894250000), true, if(equals(outputs('Facts')?['frequency'], 894250001), and(outputs('Facts')?['hasScheduledDay'], equals(mod(add(outputs('Facts')?['todayNumber'], 1), 7), outputs('Facts')?['scheduledWeekday'])), and(greaterOrEquals(sub(outputs('Facts')?['todayNumber'], outputs('Facts')?['anchorNumber']), 0), equals(mod(div(sub(outputs('Facts')?['todayNumber'], outputs('Facts')?['anchorNumber']), 7), 2), 0), equals(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7))))))",
+                    "dueToday": "@if(and(outputs('Facts')?['isInjection'], or(outputs('Facts')?['hasTaken'], outputs('Facts')?['hasSkipped'])), equals(add(max(outputs('Facts')?['takenNumber'], outputs('Facts')?['skippedNumber']), outputs('Facts')?['interval']), outputs('Facts')?['todayNumber']), and(if(equals(outputs('Facts')?['frequency'], 894250000), true, if(equals(outputs('Facts')?['frequency'], 894250001), and(outputs('Facts')?['hasScheduledDay'], equals(mod(add(outputs('Facts')?['todayNumber'], 1), 7), outputs('Facts')?['scheduledWeekday'])), and(greaterOrEquals(sub(outputs('Facts')?['todayNumber'], outputs('Facts')?['anchorNumber']), 0), equals(mod(div(sub(outputs('Facts')?['todayNumber'], outputs('Facts')?['anchorNumber']), 7), 2), 0), equals(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7)))))), not(equals(max(outputs('Facts')?['takenNumber'], outputs('Facts')?['skippedNumber']), outputs('Facts')?['todayNumber']))))",
+                    "previousDue": "@if(equals(outputs('Facts')?['frequency'], 894250000), if(greaterOrEquals(sub(outputs('Facts')?['todayNumber'], 1), outputs('Facts')?['anchorNumber']), sub(outputs('Facts')?['todayNumber'], 1), 0), if(equals(outputs('Facts')?['frequency'], 894250001), if(and(outputs('Facts')?['hasScheduledDay'], greaterOrEquals(sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), outputs('Facts')?['scheduledWeekday']), 6), 7), 1)), outputs('Facts')?['anchorNumber'])), sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), outputs('Facts')?['scheduledWeekday']), 6), 7), 1)), 0), if(and(greaterOrEquals(sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7))), 6), 7), 1)), outputs('Facts')?['anchorNumber']), equals(mod(div(sub(sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7))), 6), 7), 1)), outputs('Facts')?['anchorNumber']), 7), 2), 0)), sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7))), 6), 7), 1)), if(and(greaterOrEquals(sub(sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7))), 6), 7), 1)), 7), outputs('Facts')?['anchorNumber']), equals(mod(div(sub(sub(sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7))), 6), 7), 1)), 7), outputs('Facts')?['anchorNumber']), 7), 2), 0)), sub(sub(outputs('Facts')?['todayNumber'], add(mod(add(sub(mod(add(outputs('Facts')?['todayNumber'], 1), 7), if(outputs('Facts')?['hasScheduledDay'], outputs('Facts')?['scheduledWeekday'], mod(add(outputs('Facts')?['anchorNumber'], 1), 7))), 6), 7), 1)), 7), 0))))"
+                  },
+                  "runAfter": {
+                    "Facts": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "PastDue": {
+                  "type": "Compose",
+                  "inputs": {
+                    "missedDue": "@if(outputs('Schedule')?['rolling'], if(less(add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), outputs('Facts')?['todayNumber']), add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), 0), if(and(greater(outputs('Schedule')?['previousDue'], 0), less(outputs('Schedule')?['resolvedNumber'], outputs('Schedule')?['previousDue'])), outputs('Schedule')?['previousDue'], 0))",
+                    "daysPastDue": "@if(equals(if(outputs('Schedule')?['rolling'], if(less(add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), outputs('Facts')?['todayNumber']), add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), 0), if(and(greater(outputs('Schedule')?['previousDue'], 0), less(outputs('Schedule')?['resolvedNumber'], outputs('Schedule')?['previousDue'])), outputs('Schedule')?['previousDue'], 0)), 0), 0, sub(outputs('Facts')?['todayNumber'], if(outputs('Schedule')?['rolling'], if(less(add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), outputs('Facts')?['todayNumber']), add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), 0), if(and(greater(outputs('Schedule')?['previousDue'], 0), less(outputs('Schedule')?['resolvedNumber'], outputs('Schedule')?['previousDue'])), outputs('Schedule')?['previousDue'], 0))))",
+                    "followUp": "@and(not(outputs('Schedule')?['dueToday']), contains(createArray(1, 3, 5, 7), if(equals(if(outputs('Schedule')?['rolling'], if(less(add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), outputs('Facts')?['todayNumber']), add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), 0), if(and(greater(outputs('Schedule')?['previousDue'], 0), less(outputs('Schedule')?['resolvedNumber'], outputs('Schedule')?['previousDue'])), outputs('Schedule')?['previousDue'], 0)), 0), 0, sub(outputs('Facts')?['todayNumber'], if(outputs('Schedule')?['rolling'], if(less(add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), outputs('Facts')?['todayNumber']), add(outputs('Schedule')?['resolvedNumber'], outputs('Facts')?['interval']), 0), if(and(greater(outputs('Schedule')?['previousDue'], 0), less(outputs('Schedule')?['resolvedNumber'], outputs('Schedule')?['previousDue'])), outputs('Schedule')?['previousDue'], 0))))))"
+                  },
+                  "runAfter": {
+                    "Schedule": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "IfDueToday": {
+                  "type": "If",
+                  "expression": {
+                    "equals": [
+                      "@outputs('Schedule')?['dueToday']",
+                      true
+                    ]
+                  },
+                  "actions": {
+                    "AppendDue": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "DueItems",
+                        "value": {
+                          "name": "@outputs('Facts')?['name']",
+                          "summaryName": "@replace(outputs('Facts')?['name'], ';', ',')",
+                          "sortKey": "@concat(if(equals(outputs('Facts')?['reminderTime'], ''), '99:99', outputs('Facts')?['reminderTime']), '|', toLower(outputs('Facts')?['name']))",
+                          "line": "@concat('<li>', replace(replace(outputs('Facts')?['name'], '&', '&amp;'), '<', '&lt;'), ' — ', replace(replace(outputs('Facts')?['dosage'], '&', '&amp;'), '<', '&lt;'), ' — ', if(equals(outputs('Facts')?['reminderTime'], ''), 'no reminder time', outputs('Facts')?['reminderTime']), if(outputs('Facts')?['isInjection'], concat('<br>', if(outputs('Facts')?['hasTaken'], concat('Last taken ', convertFromUtc(outputs('Facts')?['takenAt'], parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'ddd, MMM d'), if(equals(outputs('Facts')?['takenSite'], ''), '', concat(' · ', outputs('Facts')?['takenSite']))), 'Not yet taken')), ''), '</li>')"
+                        }
+                      },
+                      "runAfter": {}
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "IfFollowUpOwed": {
+                        "type": "If",
+                        "expression": {
+                          "equals": [
+                            "@outputs('PastDue')?['followUp']",
+                            true
+                          ]
+                        },
+                        "actions": {
+                          "AppendFollowUp": {
+                            "type": "AppendToArrayVariable",
+                            "inputs": {
+                              "name": "FollowUpItems",
+                              "value": {
+                                "name": "@outputs('Facts')?['name']",
+                                "summaryName": "@replace(outputs('Facts')?['name'], ';', ',')",
+                                "sortKey": "@concat(string(sub(9, outputs('PastDue')?['daysPastDue'])), '|', toLower(outputs('Facts')?['name']))",
+                                "line": "@concat('<li>', replace(replace(outputs('Facts')?['name'], '&', '&amp;'), '<', '&lt;'), ' — ', replace(replace(outputs('Facts')?['dosage'], '&', '&amp;'), '<', '&lt;'), ' — was due ', addDays(outputs('Today'), mul(outputs('PastDue')?['daysPastDue'], -1), 'ddd, MMM d'), ' (', string(outputs('PastDue')?['daysPastDue']), if(equals(outputs('PastDue')?['daysPastDue'], 1), ' day ago)', ' days ago)'), if(outputs('Facts')?['isInjection'], concat('<br>', if(outputs('Facts')?['hasTaken'], concat('Last taken ', convertFromUtc(outputs('Facts')?['takenAt'], parameters('ppa_ReminderTimeZone (ppa_ReminderTimeZone)'), 'ddd, MMM d'), if(equals(outputs('Facts')?['takenSite'], ''), '', concat(' · ', outputs('Facts')?['takenSite']))), 'Not yet taken')), ''), '</li>')"
+                              }
+                            },
+                            "runAfter": {}
+                          }
+                        },
+                        "runAfter": {}
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "PastDue": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "LoadMedications": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            },
+            "DueSorted": {
+              "type": "Compose",
+              "inputs": "@sort(variables('DueItems'), 'sortKey')",
+              "runAfter": {
+                "ForEachMedication": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "DueLines": {
+              "type": "Select",
+              "inputs": {
+                "from": "@outputs('DueSorted')",
+                "select": "@item()?['line']"
+              },
+              "runAfter": {
+                "DueSorted": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "DueNames": {
+              "type": "Select",
+              "inputs": {
+                "from": "@outputs('DueSorted')",
+                "select": "@item()?['summaryName']"
+              },
+              "runAfter": {
+                "DueLines": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "FollowUpSorted": {
+              "type": "Compose",
+              "inputs": "@sort(variables('FollowUpItems'), 'sortKey')",
+              "runAfter": {
+                "DueNames": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "FollowUpLines": {
+              "type": "Select",
+              "inputs": {
+                "from": "@outputs('FollowUpSorted')",
+                "select": "@item()?['line']"
+              },
+              "runAfter": {
+                "FollowUpSorted": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "FollowUpNames": {
+              "type": "Select",
+              "inputs": {
+                "from": "@outputs('FollowUpSorted')",
+                "select": "@item()?['summaryName']"
+              },
+              "runAfter": {
+                "FollowUpLines": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Subject": {
+              "type": "Compose",
+              "inputs": "@concat('MedTrack: ', if(greater(length(variables('DueItems')), 0), concat(string(length(variables('DueItems'))), ' due today'), ''), if(and(greater(length(variables('DueItems')), 0), greater(length(variables('FollowUpItems')), 0)), ', ', ''), if(greater(length(variables('FollowUpItems')), 0), concat(string(length(variables('FollowUpItems'))), if(equals(length(variables('FollowUpItems')), 1), ' follow-up', ' follow-ups')), ''))",
+              "runAfter": {
+                "FollowUpNames": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Body": {
+              "type": "Compose",
+              "inputs": "@concat('<p><strong>', outputs('Subject'), '</strong></p>', if(greater(length(variables('DueItems')), 0), concat('<p><strong>Due today</strong></p><ul>', join(body('DueLines'), ''), '</ul>'), ''), if(greater(length(variables('FollowUpItems')), 0), concat('<p><strong>Follow-ups</strong></p><ul>', join(body('FollowUpLines'), ''), '</ul>'), ''), if(startsWith(toLower(coalesce(parameters('ppa_MedTrackAppUrl (ppa_MedTrackAppUrl)'), '')), 'https://'), concat('<p><a href=\"', parameters('ppa_MedTrackAppUrl (ppa_MedTrackAppUrl)'), '\">Open MedTrack</a></p>'), ''))",
+              "runAfter": {
+                "Subject": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Summary": {
+              "type": "Compose",
+              "inputs": "@concat('Due: ', if(greater(length(variables('DueItems')), 0), join(body('DueNames'), '; '), '–'), decodeUriComponent('%0A'), 'Follow-up: ', if(greater(length(variables('FollowUpItems')), 0), join(body('FollowUpNames'), '; '), '–'))",
+              "runAfter": {
+                "Body": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "AnythingToSend": {
+              "type": "If",
+              "expression": {
+                "greater": [
+                  "@add(length(variables('DueItems')), length(variables('FollowUpItems')))",
+                  0
+                ]
+              },
+              "actions": {
+                "Me": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "systemusers",
+                      "$select": "domainname",
+                      "$filter": "Microsoft.Dynamics.CRM.EqualUserId(PropertyName='systemuserid')",
+                      "$top": 1
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {},
+                  "runtimeConfiguration": {
+                    "secureData": {
+                      "properties": [
+                        "outputs"
+                      ]
+                    }
+                  }
+                },
+                "SendReminder": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                    },
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Chat with Flow bot",
+                      "body/recipient": "@first(body('Me')?['value'])?['domainname']",
+                      "body/messageBody": "@outputs('Body')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {
+                    "Me": [
+                      "Succeeded"
+                    ]
+                  },
+                  "runtimeConfiguration": {
+                    "secureData": {
+                      "properties": [
+                        "inputs",
+                        "outputs"
+                      ]
+                    }
+                  }
+                },
+                "MarkMessageAccepted": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "MessageAccepted",
+                    "value": true
+                  },
+                  "runAfter": {
+                    "SendReminder": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "RecordSent": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ppa_reminderruns",
+                      "recordId": "@outputs('RunId')",
+                      "item/ppa_outcome": 894250001,
+                      "item/ppa_duecount": "@length(variables('DueItems'))",
+                      "item/ppa_followupcount": "@length(variables('FollowUpItems'))",
+                      "item/ppa_summary": "@outputs('Summary')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {
+                    "MarkMessageAccepted": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "RecordNothingToSend": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "ppa_reminderruns",
+                        "recordId": "@outputs('RunId')",
+                        "item/ppa_outcome": 894250002,
+                        "item/ppa_duecount": 0,
+                        "item/ppa_followupcount": 0,
+                        "item/ppa_summary": "@concat('Due: –', decodeUriComponent('%0A'), 'Follow-up: –')"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  }
+                }
+              },
+              "runAfter": {
+                "Summary": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "RunId": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Failure": {
+          "type": "Scope",
+          "actions": {
+            "FailedSteps": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('Check_and_send')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "runAfter": {}
+            },
+            "FailedSendSteps": {
+              "type": "Query",
+              "inputs": {
+                "from": "@result('AnythingToSend')",
+                "where": "@equals(item()?['status'], 'Failed')"
+              },
+              "runAfter": {
+                "FailedSteps": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "ErrorStep": {
+              "type": "Compose",
+              "inputs": "@concat(coalesce(first(union(body('FailedSendSteps'), body('FailedSteps')))?['name'], 'Check_and_send'), ' (', string(coalesce(first(union(body('FailedSendSteps'), body('FailedSteps')))?['outputs']?['statusCode'], first(union(body('FailedSendSteps'), body('FailedSteps')))?['code'], 'Unknown')), ')')",
+              "runAfter": {
+                "FailedSendSteps": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IfMessageNotAccepted": {
+              "type": "If",
+              "expression": {
+                "equals": [
+                  "@variables('MessageAccepted')",
+                  false
+                ]
+              },
+              "actions": {
+                "RecordFailed": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "ppa_reminderruns",
+                      "recordId": "@outputs('RunId')",
+                      "item/ppa_outcome": 894250003,
+                      "item/ppa_errorstep": "@outputs('ErrorStep')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {}
+                }
+              },
+              "runAfter": {
+                "ErrorStep": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Check_and_send": [
+              "Failed",
+              "TimedOut"
+            ]
+          }
+        },
+        "EndAsFailed": {
+          "type": "Terminate",
+          "inputs": {
+            "runStatus": "Failed",
+            "runError": {
+              "code": "ReminderFailed",
+              "message": "@{coalesce(outputs('ErrorStep'), 'Check_and_send')}"
+            }
+          },
+          "runAfter": {
+            "Failure": [
+              "Succeeded",
+              "Failed",
+              "TimedOut"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

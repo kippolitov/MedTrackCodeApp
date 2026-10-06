@@ -1,4 +1,5 @@
-import { isSameLocalDay, startOfLocalDay, weeksBetween } from './date-utils'
+import { isSameLocalDay, startOfLocalDay } from './date-utils'
+import { isScheduledOn } from './schedule'
 import type { Ppa_medications } from '@/generated/models/Ppa_medicationsModel'
 import type { Ppa_intakelogs } from '@/generated/models/Ppa_intakelogsModel'
 
@@ -24,51 +25,11 @@ export interface AdherenceDataPoint {
   takenCount: number
 }
 
-// Maps JS getDay() (0=Sun, 1=Mon, ..., 6=Sat) to Dataverse ppa_scheduledday enum keys
-const DOW_TO_SCHEDULED_DAY: Record<number, number> = {
-  0: 894250006, // Sun
-  1: 894250000, // Mon
-  2: 894250001, // Tue
-  3: 894250002, // Wed
-  4: 894250003, // Thu
-  5: 894250004, // Fri
-  6: 894250005, // Sat
-}
-
-function dateToDayEnum(date: Date): number {
-  return DOW_TO_SCHEDULED_DAY[date.getDay()] ?? -1
-}
-
 export function scheduledDosesOnDay(
   medications: Ppa_medications[],
   date: Date
 ): Ppa_medications[] {
-  return medications.filter((med) => {
-    if (!med.ppa_isactive) return false
-
-    switch (med.ppa_frequency) {
-      case 894250000: // Daily
-        return true
-      case 894250001: { // Weekly
-        if (med.ppa_scheduledday == null) return false
-        return dateToDayEnum(date) === Number(med.ppa_scheduledday)
-      }
-      case 894250002: { // Biweekly
-        // Anchor week-0 on the explicit start date, falling back to the record
-        // creation date (matches the form's "leave blank to use creation date").
-        const anchor = med.ppa_startdate ?? med.createdon
-        if (!anchor) return false // no anchor available — not schedulable
-        const start = startOfLocalDay(new Date(anchor))
-        if (date < start) return false
-        const weeks = weeksBetween(start, date)
-        return weeks % 2 === 0
-      }
-      case 894250003: // As-Needed
-        return false
-      default:
-        return false
-    }
-  })
+  return medications.filter((med) => med.ppa_isactive && isScheduledOn(med, date))
 }
 
 export function takenLogsOnDay(

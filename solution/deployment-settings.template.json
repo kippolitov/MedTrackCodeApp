@@ -1,0 +1,24 @@
+{
+  "EnvironmentVariables": [
+    {
+      "SchemaName": "ppa_ReminderTimeZone",
+      "Value": "__REMINDER_TIME_ZONE__"
+    },
+    {
+      "SchemaName": "ppa_MedTrackAppUrl",
+      "Value": "https://apps.powerapps.com/play/e/__ENVIRONMENT_ID__/a/__APP_ID__"
+    }
+  ],
+  "ConnectionReferences": [
+    {
+      "LogicalName": "ppa_MedTrackDataverse",
+      "ConnectionId": "__CONN_DATAVERSE_ID__",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+    },
+    {
+      "LogicalName": "ppa_MedTrackTeams",
+      "ConnectionId": "__CONN_TEAMS_ID__",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+    }
+  ]
+}

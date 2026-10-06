@@ -74,7 +74,7 @@ describe('adherence.ts', () => {
     expect(scheduledDosesOnDay([med], wednesday)).toHaveLength(0)
   })
 
-  it('Biweekly med uses floor(weeksBetween(createdon, D) % 2) === 0', () => {
+  it('Biweekly med is scheduled in alternating weeks counted from createdon', () => {
     const med = makeMed({
       ppa_frequency: 894250002,
       createdon: localISOString(2026, 6, 1),
@@ -85,6 +85,42 @@ describe('adherence.ts', () => {
     expect(scheduledDosesOnDay([med], week0)).toHaveLength(1)
     expect(scheduledDosesOnDay([med], week1)).toHaveLength(0)
     expect(scheduledDosesOnDay([med], week2)).toHaveLength(1)
+  })
+
+  it('Biweekly med is scheduled on one day per fortnight, not every day of an "on" week', () => {
+    // No scheduled day set → falls back to the anchor's weekday (Monday June 1 2026).
+    const med = makeMed({
+      ppa_frequency: 894250002,
+      createdon: localISOString(2026, 6, 1),
+    })
+    const scheduledDays: number[] = []
+    for (let day = 1; day <= 28; day++) {
+      if (scheduledDosesOnDay([med], localDate(2026, 6, day)).length > 0) scheduledDays.push(day)
+    }
+    expect(scheduledDays).toEqual([1, 15])
+  })
+
+  it('Biweekly med follows ppa_scheduledday when it differs from the anchor weekday', () => {
+    // Start Wednesday June 3 2026, scheduled Monday (enum 894250000):
+    // first Monday on/after the start is June 8, then every 14 days.
+    const med = makeMed({
+      ppa_frequency: 894250002,
+      ppa_scheduledday: 894250000,
+      ppa_startdate: '2026-06-03',
+    })
+    const scheduledDays: number[] = []
+    for (let day = 1; day <= 30; day++) {
+      if (scheduledDosesOnDay([med], localDate(2026, 6, day)).length > 0) scheduledDays.push(day)
+    }
+    expect(scheduledDays).toEqual([8, 22])
+  })
+
+  it('Biweekly med reads a date-only ppa_startdate as that calendar day in every time zone', () => {
+    // '2026-06-01' must anchor on Monday June 1, not on May 31 west of UTC.
+    const med = makeMed({ ppa_frequency: 894250002, ppa_startdate: '2026-06-01' })
+    expect(scheduledDosesOnDay([med], localDate(2026, 5, 31))).toHaveLength(0)
+    expect(scheduledDosesOnDay([med], localDate(2026, 6, 1))).toHaveLength(1)
+    expect(scheduledDosesOnDay([med], localDate(2026, 6, 15))).toHaveLength(1)
   })
 
   it('As-Needed med contributes 0 to scheduled count', () => {

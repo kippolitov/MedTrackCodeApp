@@ -48,6 +48,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
+      # The solution source must hold environment variable definitions only,
+      # never their values, and no email address (spec 004, FR-028/FR-030).
+      - name: Check solution source for environment variable values
+        shell: pwsh
+        run: ./scripts/ci/assert-no-envvar-values.ps1 -Path solution/src
+
       - name: Lint workflow files (actionlint)
         shell: bash
         run: |

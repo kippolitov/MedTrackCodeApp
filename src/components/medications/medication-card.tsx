@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import {
 } from '@/generated/models/Ppa_medicationsModel'
 import type { MedicationViewModel } from '@/lib/adherence'
 import { formatTime } from '@/lib/date-utils'
+import MedicationSchedule from './medication-schedule'
 
 export type { MedicationViewModel }
 
@@ -89,11 +91,11 @@ export default function MedicationCard({
     <>
       <div className="border rounded-lg p-4 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-1">
-            <span className="font-medium">{medication.ppa_name}</span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="font-medium wrap-anywhere">{medication.ppa_name}</span>
             <Badge variant="secondary">{medication.ppa_dosage}</Badge>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -154,6 +156,9 @@ export default function MedicationCard({
           </Label>
           {isTogglingActive && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
         </div>
+
+        <Separator />
+        <MedicationSchedule medication={medication} />
       </div>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
