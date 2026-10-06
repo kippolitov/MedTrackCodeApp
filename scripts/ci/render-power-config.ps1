@@ -3,7 +3,7 @@
 Renders power.config.json from power.config.template.json by substituting the
 __ENVIRONMENT_ID__ / __APP_ID__ placeholders with values from the
 PP_ENVIRONMENT_ID / PP_APP_ID environment variables. Run this immediately
-before `pac code push` in a deploy job.
+before the Code App is published in a deploy job (scripts/deploy/deploy-app.ps1).
 #>
 
 $ErrorActionPreference = 'Stop'

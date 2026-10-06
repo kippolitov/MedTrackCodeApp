@@ -110,18 +110,14 @@ jobs:
 
   deploy-production:
     needs: sync-dev-and-export
-    # windows-latest, not ubuntu-latest: `pac auth create`'s SP profile
-    # (secret included) persists via Windows Credential Manager (DPAPI) here,
-    # which just works. On Linux runners it falls back to an unprotected
-    # plaintext cache (no keyring daemon available even with libsecret
-    # installed) that a later step's `pac code push` process fails to reload
-    # correctly -- surfaces as AADSTS7000215 "Invalid client secret provided"
-    # even though the same secret authenticates fine elsewhere in the same
-    # job (e.g. the import-solution action, which doesn't round-trip through
-    # this cache). Found live 2026-07-02; libsecret-1-0 alone didn't fix it
-    # (confirmed: still no working keyring service headlessly). The
-    # sync-dev-and-export job above stays on ubuntu-latest -- it only uses
-    # official actions with their own direct auth, never a persisted profile.
+    # windows-latest was chosen on 2026-07-02 because `pac auth create`'s
+    # service-principal profile could not be reloaded on Linux runners by a
+    # later `pac code push`. The app is now published with the npm-based
+    # Power Apps CLI and no `pac auth` profile (see scripts/deploy/deploy-app.ps1),
+    # so that reason is gone; the runner is kept because every other step is
+    # verified on it and a Linux runner has not been tried with the new CLI.
+    # The sync-dev-and-export job above stays on ubuntu-latest -- it only
+    # uses official actions with their own direct auth.
     runs-on: windows-latest
     environment: production
     permissions:
@@ -197,19 +193,13 @@ jobs:
           PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
         run: ./scripts/deploy/configure-reminder-flow.ps1
 
-      # --- App (US2, FR-005): pac code push and pac data import (below) use
-      # the pac CLI directly, so authenticate immediately before them here
-      # rather than earlier — a profile created before the actions above ran
-      # is not reliably present afterward.
-      - name: Authenticate to Power Platform
-        shell: pwsh
-        env:
-          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
-          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
-          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
-          PP_ENVIRONMENT_URL: ${{ vars.PP_ENVIRONMENT_URL }}
-        run: ./scripts/deploy/auth.ps1
-
+      # --- App (US2, FR-005): published with the npm-based Power Apps CLI
+      # (`pa app push --non-interactive`), signed in as the service principal
+      # through environment variables -- Microsoft's supported path, per the
+      # resolution of microsoft/PowerAppsCodeApps#394. No `pac auth` profile
+      # is involved. One-time prerequisite, done by the app's owner: the app
+      # is shared with the service principal with edit access (see
+      # scripts/deploy/deploy-app.ps1).
       - name: Render power.config.json
         shell: pwsh
         env:
@@ -219,6 +209,10 @@ jobs:
 
       - name: Deploy Code App
         shell: pwsh
+        env:
+          PP_CLIENT_ID: ${{ secrets.PP_CLIENT_ID }}
+          PP_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
+          PP_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
         run: ./scripts/deploy/deploy-app.ps1
 
       # --- Data (US3, FR-016): off by default, opt-in only, no record-content logging ---

@@ -18,11 +18,11 @@ Deploys the Code App + Dataverse schema (+ opt-in data) to a target Power Platfo
 |---|---|
 | Checkout | source at release commit. |
 | Install `pac` | via `microsoft/powerplatform-actions/actions/install` or dotnet tool. |
-| Authenticate | `pac auth create` with SP secrets → target `PP_ENVIRONMENT_URL`. Fail fast with clear message if secrets missing/invalid; never prompt (FR-006, edge case "Secrets missing"). |
+| Authenticate | The solution actions take the SP secrets as inputs; the app step signs the Power Apps CLI in as the SP through `PA_CLI_*` environment variables (set by `deploy-app.ps1` from `PP_CLIENT_ID`/`PP_CLIENT_SECRET`/`PP_TENANT_ID`). No `pac auth` profile. Fail fast with clear message if secrets missing/invalid; never prompt (FR-006, edge case "Secrets missing"). |
 | Build | `npm ci` + `npm run build:ci` (or download CI artifact). |
 | Render config | `scripts/ci/render-power-config.*` → `power.config.json` from template + `PP_ENVIRONMENT_ID`/`PP_APP_ID` (FR-020). |
 | **Schema** | `pac solution pack` (`solution/src`) → `import-solution` (SP auth) → `publish-solution`. Runs **before** app push (FR-007). |
-| **App** | `pac code push` (`scripts/deploy/deploy-app.*`, `--log-to-console`) (FR-005). |
+| **App** | `pa app push --non-interactive` from the pinned `@microsoft/power-apps-cli` (`scripts/deploy/deploy-app.ps1`) (FR-005). One-time prerequisite per environment: the app's owner shares the app with the SP with edit access (`pa app share --principal <enterprise-application-object-id> --access edit`). Replaces `pac code push --solutionName` (changed 2026-10-05, microsoft/PowerAppsCodeApps#394). |
 | **Data (conditional)** | `if: inputs.migrate_data` → `scripts/deploy/migrate-data.ps1`, a Web API upsert against `data/ppa_medication.json`/`data/ppa_intakelog.json` keyed by alternate key (idempotent upsert). Skipped entirely when false (FR-016). `pac data import`/`export` do not exist in the PAC CLI; the only related tool, `pac tool CMT`, is a Windows GUI executable and cannot run on a GitHub-hosted Linux runner — found live 2026-07-01 during T039. |
 | Record | Emit deployment summary (commit, environment, actor, outcome, data flag) (FR-009). |
 
