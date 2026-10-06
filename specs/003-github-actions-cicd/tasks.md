@@ -325,4 +325,6 @@ What changed here:
 
 **Prerequisite before the next deploy** (checked 2026-10-05: neither service principal has a permission on its environment's app yet, only the owner does): the owner shares the dev app with the dev service principal and the production app with the production one, each with edit access.
 
-**Not yet verified**: a pipeline run with the new step. The runner stays `windows-latest`; the reason it was chosen (the `pac auth` profile on Linux) no longer applies, but a Linux runner has not been tried with the new CLI.
+**First pipeline run (2026-10-06, after merging PR #21)**: the dev app had been shared with the dev service principal (edit access confirmed on the app). "Deploy Code App" failed with `error: unknown option '--environment-id'`. The script passed that flag; the CLI accepts it only when there is no `power.config.json`, and otherwise takes the environment from that file. The flag was removed. Every earlier step of that run passed, and the app's content in dev was already current from the previous deploy.
+
+**Not yet verified**: a pipeline run with the corrected step. The runner stays `windows-latest`; the reason it was chosen (the `pac auth` profile on Linux) no longer applies, but a Linux runner has not been tried with the new CLI.
