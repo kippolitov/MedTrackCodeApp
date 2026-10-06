@@ -47,10 +47,6 @@ $configPath = Join-Path $repoRoot 'power.config.json'
 if (-not (Test-Path $configPath)) {
     throw "power.config.json not found at $configPath. Run scripts/ci/render-power-config.ps1 first."
 }
-$environmentId = (Get-Content -Path $configPath -Raw | ConvertFrom-Json).environmentId
-if ([string]::IsNullOrWhiteSpace($environmentId)) {
-    throw "power.config.json has no environmentId."
-}
 
 # These variables make the CLI sign in as the service principal instead of
 # using a cached interactive account. They live only in this process.
@@ -64,9 +60,12 @@ Write-Host "Publishing Code App using $configPath as service principal $($env:PP
 Push-Location $repoRoot
 try {
     # --no: use the version npm ci installed; never download another one.
+    # No --environment-id: the CLI reads the environment from
+    # power.config.json and rejects the flag as an unknown option when that
+    # file exists (found live 2026-10-06).
     # The earlier CLI could print an HTTP error and still exit 0 (found live
     # 2026-07-02), so the output is checked as well as the exit code.
-    npx --no -- pa app push --non-interactive --no-color --environment-id $environmentId 2>&1 |
+    npx --no -- pa app push --non-interactive --no-color 2>&1 |
         Tee-Object -Variable capturedOutput | ForEach-Object { Write-Host $_ }
     $exitCode = $LASTEXITCODE
 } finally {
