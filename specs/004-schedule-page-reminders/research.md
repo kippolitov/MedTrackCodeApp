@@ -257,8 +257,15 @@ notification, the Reminder Run recorded outcome Sent with the right due count, a
 account name could not be opened from run history. One thing to know: Teams holds back
 phone notifications while the user is active in Teams on a computer.
 
-**Not yet verified**: the Teams connection shared with the deployment service principal
-(the pipeline path), and the flow bot's behaviour when the service principal owns the flow.
+**Verified with the service principal as owner (2026-10-06 UTC)**: the owner shared both
+connections with the dev deployment service principal as "Can use" and changed the dev
+flow's owner to it. A run under that ownership recorded outcome Sent and Teams returned
+HTTP 201: the message still goes to the user behind the Dataverse connection, not to the
+flow's owner.
+
+**Not yet verified**: the service principal turning the flow on by itself, which is what
+the deploy step does and what needs the shared connections. (In the test above the flow
+was turned on by the owner's own account.)
 
 The earlier decisions follow, kept as the record of what was tried.
 
