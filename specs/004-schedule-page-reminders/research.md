@@ -125,8 +125,8 @@ bounded page.
 
 ## R5. How the daily check is triggered at local midnight
 
-**Decision**: A Recurrence trigger that fires every hour, with a trigger condition that
-lets it run only when the local hour is 0 to 3. Local time comes from a Text environment
+**Decision**: A Recurrence trigger that fires every hour, at five past, with a trigger
+condition that lets it run only when the local hour is 0 to 3. Local time comes from a Text environment
 variable, `ppa_ReminderTimeZone` (a Windows time zone name, default `UTC`). The first run
 after local midnight does the work; later runs that night exit at the idempotency guard
 (R6) unless the earlier attempt failed, in which case they retry.
@@ -134,7 +134,7 @@ after local midnight does the work; later runs that night exit at the idempotenc
 **Rationale**:
 - Daylight saving is handled by `convertFromUtc`, not by trigger arithmetic. A zone whose
   clocks jump at midnight skips hour 0 entirely on that day; the hour-1 run covers it.
-- A transient outage at 00:00 is retried at 01:00, 02:00 and 03:00 without owner action
+- A transient outage at 00:05 is retried at 01:05, 02:05 and 03:05 without owner action
   (FR-021: a failure must not prevent the check from running).
 - The time zone is configuration, not a literal in a public repository (CLAUDE.md:
   environment variables for configuration).
@@ -186,8 +186,27 @@ Verified way to test at any time of day, with no design change:
 This is an open point for the owner: keep the gate and test this way, or change the gate.
 quickstart.md sections E to G assume a manual test simply runs.
 
+**Found in production (2026-10-07) — the trigger must not sit on the hour boundary.**
+The trigger first ran at minute 0 (`startTime` `2026-01-01T00:00:00Z`). A Recurrence
+trigger does not fire exactly on time: of 24 hourly evaluations in production, 7 started
+before the hour, by up to 0.4 s. The trigger condition reads `utcNow()` at that moment,
+so an early midnight evaluation saw the previous hour:
+
+| Evaluation (UTC) | Eastern local time | `HH` | Result |
+|---|---|---|---|
+| 2026-10-07T03:59:59.597Z | 23:59:59 | `23` | not fired — no run at midnight |
+| 2026-10-06T04:59:59.607Z | 00:59:59 | `00` | fired — the 01:00 run did the work |
+| 2026-10-06T08:00:00.588Z | 04:00:00 | `04` | not fired |
+
+No reminder was lost, because the next hourly run did the work, but it arrived an hour
+late, outside SC-006. The trigger now starts at five past the hour (`startTime`
+`2026-01-01T00:05:00Z`), far enough from the boundary that the hour cannot be read
+wrong, and still inside SC-006's 15 minutes. Padding the condition (for example
+`addSeconds(utcNow(), 30)`) was rejected: it would let the early run start, and the
+`Today` step reads `utcNow()` the same way, so it could take yesterday's date.
+
 **Alternatives considered**:
-- *Daily Recurrence at 00:00 with a literal `timeZone`* — simplest, but the zone would be
+- *Daily Recurrence at local midnight with a literal `timeZone`* — simplest, but the zone would be
   duplicated (trigger and in-flow date maths), hard-coded, and there is no retry.
 - *Every 15 minutes* — supports half-hour-offset zones exactly, at the cost of a noisy run
   history. Not needed for the owner's zone; recorded as a known limitation (R13).
@@ -618,7 +637,7 @@ read. A tooltip — unusable on touch screens.
 
 ## R13. Known limitations accepted
 
-- **Half-hour-offset time zones**: with an hourly trigger the check runs at 00:30 local in
+- **Half-hour-offset time zones**: with an hourly trigger the check runs at 00:35 local in
   such zones, outside SC-006's 15-minute target. Not the owner's zone. Moving to a
   30-minute trigger fixes it if ever needed.
 - **One owner per environment**: the `ppa_ReminderRun` alternate key is the day alone, so
