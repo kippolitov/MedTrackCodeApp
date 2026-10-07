@@ -23,11 +23,15 @@ FR-014 to FR-027 and User Stories 2 and 3. The rules it applies are in
 
 | Setting | Value |
 |---|---|
-| Type | Recurrence, every 1 hour, at minute 0 |
+| Type | Recurrence, every 1 hour, at minute 5 (`startTime` `2026-01-01T00:05:00Z`) |
 | Trigger condition | local hour, from `convertFromUtc(utcNow(), <time zone>, 'HH')`, is 0, 1, 2 or 3 |
 | Concurrency | 1 (no parallel runs) |
 
-Normal night: the 00:00 run does the work and the 01:00–03:00 runs stop at step 3.
+Normal night: the 00:05 run does the work and the 01:05–03:05 runs stop at step 3.
+
+The trigger is kept off the hour boundary on purpose. A Recurrence trigger can fire a
+fraction of a second early; at minute 0 that made the midnight check read the local hour
+as 23 and skip itself (research R5).
 
 ## Steps
 

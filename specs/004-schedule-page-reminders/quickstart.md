@@ -151,8 +151,8 @@ Then:
 Leave the flow on for one night with at least one seeded Medication due the next day.
 
 **Expect**: a Reminder Run for the new day with outcome Sent, created within 15 minutes of
-local midnight, and exactly one message. Runs at 01:00–03:00 either do not appear or end at
-the guard.
+local midnight (the check runs at 00:05), and exactly one message. Runs at 01:05–03:05
+either do not appear or end at the guard.
 
 ## Definition of done for this feature
 

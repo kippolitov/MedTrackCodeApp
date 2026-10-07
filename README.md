@@ -104,7 +104,7 @@ Use the object ID shown under **Enterprise applications** in Microsoft Entra, no
 
 ## Daily reminder
 
-A scheduled cloud flow, **MedTrack – Daily Reminder**, checks once a day at local midnight and posts one message in Microsoft Teams, as a chat from the Flow bot (shown as "Workflows"). With Teams on your phone, that is a notification:
+A scheduled cloud flow, **MedTrack – Daily Reminder**, checks once a day just after local midnight (00:05) and posts one message in Microsoft Teams, as a chat from the Flow bot (shown as "Workflows"). With Teams on your phone, that is a notification:
 
 - **Due today** — every Active Medication due that day. Injections count from the last dose; everything else follows its fixed schedule.
 - **Follow-ups** — a Medication whose intake was missed, on the 1st, 3rd, 5th and 7th day afterwards. Logging it as Taken or Skipped stops the follow-ups.
@@ -133,7 +133,7 @@ Earlier versions of this feature sent email, first through the Mail connector an
 
 - **Teams holds back phone notifications while you are active in Teams on a computer.** The message is in the chat either way.
 - **A failed check notifies nobody.** Power Automate sends failure notices to the flow's owner, and the owner is a service principal. The record of each day is a row in the **Reminder Run** table (`ppa_reminderrun`) — outcome Sent, Nothing To Send or Failed, with the step that failed — and the flow's run history. A day with no row at all means the flow could not reach Dataverse.
-- **At most one message a day.** A second run on the same day stops at the Reminder Run row. A failed run is retried on the hour until 03:00 local time.
+- **At most one message a day.** A second run on the same day stops at the Reminder Run row. A failed run is retried every hour, at five past, until 03:05 local time.
 - **Testing by hand works only in the first four hours of the local day.** The flow's Run button obeys the same time gate as the schedule.
 
 ---

@@ -53,7 +53,7 @@
           "recurrence": {
             "frequency": "Hour",
             "interval": 1,
-            "startTime": "2026-01-01T00:00:00Z"
+            "startTime": "2026-01-01T00:05:00Z"
           },
           "conditions": [
             {

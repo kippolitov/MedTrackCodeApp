@@ -92,7 +92,7 @@ No column ever holds the reminder address.
 - `Started`, `Sent` and `Nothing To Send` all end a later run immediately.
 - A row stuck at `Started` means a run was interrupted after it may have sent. It is not
   retried, which keeps the guarantee at "never two messages" rather than "always one".
-- Retries stop after the 03:00 local run (research R5); the row then stays `Failed`.
+- Retries stop after the 03:05 local run (research R5); the row then stays `Failed`.
 
 ### Validation rules
 
